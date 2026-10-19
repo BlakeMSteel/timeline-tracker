@@ -31,15 +31,15 @@ import {
 import { caseTitle, type Actor, type Case } from "../cases/types";
 import { useCase } from "./useCase";
 
-/** /case/:id — the case board: the map, a time scrubber and everyone's movements. */
-export function CaseBoardPage() {
+/** /case/:id — the case timeline: the map, a time scrubber and everyone's movements. */
+export function CaseTimelinePage() {
   const { id } = useParams();
   const c = useCase(id);
 
   if (c === undefined)
     return <Typography color="text.secondary">Loading…</Typography>;
   if (c === null) return <CaseNotFound />;
-  return <Board key={c.id} c={c} />;
+  return <CaseTimeline key={c.id} c={c} />;
 }
 
 type Layer = "positions" | "paths" | "pins";
@@ -47,7 +47,7 @@ type Layer = "positions" | "paths" | "pins";
 const PLAY_STEP = 5;
 const PLAY_INTERVAL_MS = 150;
 
-function Board({ c }: { c: Case }) {
+function CaseTimeline({ c }: { c: Case }) {
   const range = timeRange(c.actors);
   const [from, to] = range;
   const [time, setTime] = useState(from);

@@ -1,24 +1,54 @@
-import type { MouseEvent, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { Box, Typography } from "@mui/material";
 import { useObjectUrl } from "../cases/useObjectUrl";
 
 interface MapCanvasProps {
   image: Blob | null;
   alt: string;
+  /** Scale the image to fit the parent's height as well as its width. The parent needs a definite height. */
+  fill?: boolean;
   /** Called with the clicked point as fractions (0–1) of the image size. */
   onPick?: (x: number, y: number) => void;
   /** Overlay content, positioned with percentages of the image. */
   children?: ReactNode;
 }
 
+interface Size {
+  width: number;
+  height: number;
+}
+
 /** A map image with an overlay layer that lines up with the image exactly. */
 export default function MapCanvas({
   image,
   alt,
+  fill = false,
   onPick,
   children,
 }: MapCanvasProps) {
   const url = useObjectUrl(image);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<Size | null>(null);
+  const [natural, setNatural] = useState<Size | null>(null);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!fill || !el) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setBox({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fill, url]);
 
   if (!image) {
     return (
@@ -27,7 +57,8 @@ export default function MapCanvas({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          aspectRatio: "4 / 3",
+          aspectRatio: fill ? undefined : "4 / 3",
+          flex: fill ? 1 : undefined,
           border: 1,
           borderStyle: "dashed",
           borderColor: "divider",
@@ -42,6 +73,12 @@ export default function MapCanvas({
     );
   }
 
+  // In fill mode the image is sized explicitly to fit the available box, keeping its aspect ratio.
+  const scale =
+    fill && box && natural
+      ? Math.min(box.width / natural.width, box.height / natural.height)
+      : null;
+
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     if (!onPick) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -52,14 +89,20 @@ export default function MapCanvas({
   };
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center" }}>
+    <Box
+      ref={boxRef}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        ...(fill && { flex: 1, minHeight: 0, overflow: "hidden" }),
+      }}
+    >
       <Box
         sx={{
           position: "relative",
           display: "inline-block",
           lineHeight: 0,
-          border: 1,
-          borderColor: "divider",
           borderRadius: 1,
           overflow: "hidden",
         }}
@@ -70,11 +113,27 @@ export default function MapCanvas({
             src={url}
             alt={alt}
             draggable={false}
+            onLoad={(e) =>
+              setNatural({
+                width: e.currentTarget.naturalWidth,
+                height: e.currentTarget.naturalHeight,
+              })
+            }
             sx={{
               display: "block",
-              maxWidth: "100%",
-              maxHeight: "70vh",
               userSelect: "none",
+              ...(scale !== null
+                ? {
+                    width: natural!.width * scale,
+                    height: natural!.height * scale,
+                  }
+                : fill
+                  ? {
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      visibility: "hidden",
+                    }
+                  : { maxWidth: "100%", maxHeight: "70vh" }),
             }}
           />
         )}
@@ -84,6 +143,9 @@ export default function MapCanvas({
             position: "absolute",
             inset: 0,
             lineHeight: 1.5,
+            borderRadius: 1,
+            // Drawn over the image as an inset shadow, so the border doesn't change the image's size.
+            boxShadow: (theme) => `0 0 0 1px ${theme.palette.divider} inset`,
             cursor: onPick ? "crosshair" : "default",
           }}
         >

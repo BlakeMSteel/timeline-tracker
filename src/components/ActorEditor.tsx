@@ -142,10 +142,7 @@ export default function ActorEditor({
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr 1fr auto",
-                  sm: "2fr 1fr 1fr auto",
-                },
+                gridTemplateColumns: "1fr 1fr auto",
                 gap: 1,
                 alignItems: "center",
               }}
@@ -158,7 +155,7 @@ export default function ActorEditor({
                 onChange={(e) =>
                   updateActivity(activity.id, { locationId: e.target.value })
                 }
-                sx={{ gridColumn: { xs: "1 / -1", sm: "auto" } }}
+                sx={{ gridColumn: "1 / -1" }}
               >
                 <MenuItem value="">
                   <em>None</em>

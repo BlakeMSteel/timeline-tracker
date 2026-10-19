@@ -5,8 +5,11 @@ import {
   Button,
   IconButton,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
@@ -18,6 +21,7 @@ import { Link, useParams } from "react-router";
 import ActorEditor from "../components/ActorEditor";
 import CaseNotFound from "../components/CaseNotFound";
 import EntryBox from "../components/EntryBox";
+import { TOOLBAR_HEIGHT } from "../components/Header";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import { saveCase } from "../cases/db";
 import { ACTOR_COLORS, type Actor, type Case } from "../cases/types";
@@ -37,9 +41,16 @@ export function CaseEditPage() {
 /** "new" while placing a new place; a place id while moving that place. */
 type Picking = "new" | string | null;
 
+type SidebarTab = "locations" | "actors";
+
+/** The vertical padding App's Container puts around every page. */
+const PAGE_PADDING = 24;
+
 function CaseForm({ initialCase }: { initialCase: Case }) {
   const [c, setC] = useState(initialCase);
   const [picking, setPicking] = useState<Picking>(null);
+  const [tab, setTab] = useState<SidebarTab>("locations");
+  const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
   // Every change is saved straight away; IndexedDB runs the writes in order.
   useEffect(() => {
@@ -79,7 +90,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
     if (
       uses > 0 &&
       !confirm(
-        `${uses} activit${uses === 1 ? "y is" : "ies are"} at this place. Delete it anyway?`,
+        `${uses} activit${uses === 1 ? "y is" : "ies are"} at this location. Delete it anyway?`,
       )
     )
       return;
@@ -122,7 +133,13 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack
+      spacing={3}
+      sx={{
+        // On desktop the page fits the window: the sidebar scrolls and the map shrinks to fit.
+        height: { md: `calc(100dvh - ${TOOLBAR_HEIGHT + PAGE_PADDING * 2}px)` },
+      }}
+    >
       <Box
         sx={{
           display: "flex",
@@ -141,40 +158,174 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
           to={`/case/${c.id}`}
           startIcon={<VisibilityIcon />}
         >
-          View board
+          View timeline
         </Button>
       </Box>
 
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "3fr 2fr" },
+          gridTemplateColumns: { xs: "1fr", md: "400px 1fr" },
+          gridTemplateRows: { md: "minmax(0, 1fr)" },
           gap: 3,
-          alignItems: "start",
+          alignItems: { xs: "start", md: "stretch" },
+          flex: { md: 1 },
+          minHeight: 0,
         }}
       >
-        <Stack spacing={2}>
+        <Box
+          sx={{
+            order: { xs: 2, md: 1 },
+            display: "flex",
+            flexDirection: "column",
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            bgcolor: "background.paper",
+            minHeight: 0,
+          }}
+        >
+          <Tabs
+            value={tab}
+            onChange={(_, value: SidebarTab) => setTab(value)}
+            variant="fullWidth"
+            sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}
+          >
+            <Tab
+              value="locations"
+              label={`Locations (${c.locations.length})`}
+            />
+            <Tab value="actors" label={`Actors (${c.actors.length})`} />
+          </Tabs>
+          <Stack spacing={1.5} sx={{ p: 1.5, overflowY: "auto" }}>
+            {tab === "locations" ? (
+              <>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  disabled={!c.map.image}
+                  onClick={() => setPicking("new")}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  Add location
+                </Button>
+                {c.locations.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    {c.map.image
+                      ? "Add a location, then click the map where it is."
+                      : "Add a map image to start placing locations."}
+                  </Typography>
+                )}
+                {c.locations.map((l) => (
+                  <EntryBox
+                    key={l.id}
+                    sx={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 1,
+                      borderColor:
+                        picking === l.id ? "primary.main" : "divider",
+                    }}
+                  >
+                    <TextField
+                      size="small"
+                      label="Name"
+                      value={l.name}
+                      onChange={(e) =>
+                        update({
+                          locations: c.locations.map((loc) =>
+                            loc.id === l.id
+                              ? { ...loc, name: e.target.value }
+                              : loc,
+                          ),
+                        })
+                      }
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton
+                      size="small"
+                      aria-label="Move location"
+                      title="Move on map"
+                      color={picking === l.id ? "primary" : "default"}
+                      onClick={() => setPicking(picking === l.id ? null : l.id)}
+                    >
+                      <OpenWithIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      aria-label="Delete location"
+                      onClick={() => deletePlace(l.id)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </EntryBox>
+                ))}
+              </>
+            ) : (
+              <>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={addActor}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  Add actor
+                </Button>
+                {c.actors.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    No actors yet.
+                  </Typography>
+                )}
+                {c.actors.map((actor) => (
+                  <ActorEditor
+                    key={actor.id}
+                    actor={actor}
+                    locations={c.locations}
+                    onChange={updateActor}
+                    onDelete={() => deleteActor(actor)}
+                  />
+                ))}
+              </>
+            )}
+          </Stack>
+        </Box>
+
+        <Stack
+          spacing={2}
+          sx={{ order: { xs: 1, md: 2 }, minWidth: 0, minHeight: 0 }}
+        >
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             Map
           </Typography>
-          <TextField
-            size="small"
-            label="Name"
-            value={c.map.name}
-            onChange={(e) =>
-              update({ map: { ...c.map, name: e.target.value } })
-            }
-          />
-          <TextField
-            size="small"
-            label="Description"
-            multiline
-            minRows={2}
-            value={c.map.description}
-            onChange={(e) =>
-              update({ map: { ...c.map, description: e.target.value } })
-            }
-          />
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" },
+              gap: 2,
+            }}
+          >
+            <TextField
+              size="small"
+              label="Name"
+              value={c.map.name}
+              onChange={(e) =>
+                update({ map: { ...c.map, name: e.target.value } })
+              }
+            />
+            <TextField
+              size="small"
+              label="Description"
+              multiline
+              maxRows={4}
+              value={c.map.description}
+              onChange={(e) =>
+                update({ map: { ...c.map, description: e.target.value } })
+              }
+            />
+          </Box>
           <Button
             component="label"
             size="small"
@@ -208,11 +359,14 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
               }
             >
               Click the map to{" "}
-              {picking === "new" ? "place the new location" : "move this place"}
+              {picking === "new"
+                ? "place the new location"
+                : "move this location"}
               .
             </Alert>
           )}
           <MapCanvas
+            fill={isDesktop}
             image={c.map.image}
             alt={c.map.name || "Map"}
             onPick={picking ? handlePick : undefined}
@@ -224,118 +378,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
             ))}
           </MapCanvas>
         </Stack>
-
-        <Stack spacing={2}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Places
-            </Typography>
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              disabled={!c.map.image}
-              onClick={() => setPicking("new")}
-            >
-              Add place
-            </Button>
-          </Box>
-          {c.locations.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              {c.map.image
-                ? "Add a place, then click the map where it is."
-                : "Add a map image to start placing locations."}
-            </Typography>
-          )}
-          {c.locations.map((l) => (
-            <EntryBox
-              key={l.id}
-              sx={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 1,
-                borderColor: picking === l.id ? "primary.main" : "divider",
-              }}
-            >
-              <TextField
-                size="small"
-                label="Name"
-                value={l.name}
-                onChange={(e) =>
-                  update({
-                    locations: c.locations.map((loc) =>
-                      loc.id === l.id ? { ...loc, name: e.target.value } : loc,
-                    ),
-                  })
-                }
-                sx={{ flex: 1 }}
-              />
-              <IconButton
-                size="small"
-                aria-label="Move place"
-                title="Move on map"
-                color={picking === l.id ? "primary" : "default"}
-                onClick={() => setPicking(picking === l.id ? null : l.id)}
-              >
-                <OpenWithIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                aria-label="Delete place"
-                onClick={() => deletePlace(l.id)}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </EntryBox>
-          ))}
-        </Stack>
       </Box>
-
-      <Stack spacing={2}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Actors
-          </Typography>
-          <Button size="small" startIcon={<AddIcon />} onClick={addActor}>
-            Add actor
-          </Button>
-        </Box>
-        {c.actors.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No actors yet.
-          </Typography>
-        )}
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
-            gap: 2,
-            alignItems: "start",
-          }}
-        >
-          {c.actors.map((actor) => (
-            <ActorEditor
-              key={actor.id}
-              actor={actor}
-              locations={c.locations}
-              onChange={updateActor}
-              onDelete={() => deleteActor(actor)}
-            />
-          ))}
-        </Box>
-      </Stack>
     </Stack>
   );
 }
