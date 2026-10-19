@@ -306,7 +306,7 @@ function Pins({ c, actors }: { c: Case; actors: Actor[] }) {
           }
         >
           <Box sx={{ cursor: "help" }}>
-            <PlacePin name={l.name} />
+            <PlacePin name={l.name} icon={l.icon} />
           </Box>
         </Tooltip>
       </MapPoint>

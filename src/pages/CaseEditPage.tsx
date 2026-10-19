@@ -21,9 +21,11 @@ import { Link, useParams } from "react-router";
 import ActorEditor from "../components/ActorEditor";
 import CaseNotFound from "../components/CaseNotFound";
 import EntryBox from "../components/EntryBox";
+import LocationIconPicker from "../components/LocationIconPicker";
 import { TOOLBAR_HEIGHT } from "../components/Header";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import { saveCase } from "../cases/db";
+import { DEFAULT_LOCATION_ICON } from "../cases/locationIcons";
 import { ACTOR_COLORS, type Actor, type Case } from "../cases/types";
 import { useCase } from "./useCase";
 
@@ -72,6 +74,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
             name: `Place ${c.locations.length + 1}`,
             x,
             y,
+            icon: DEFAULT_LOCATION_ICON,
           },
         ],
       });
@@ -233,6 +236,16 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                         picking === l.id ? "primary.main" : "divider",
                     }}
                   >
+                    <LocationIconPicker
+                      value={l.icon}
+                      onChange={(icon) =>
+                        update({
+                          locations: c.locations.map((loc) =>
+                            loc.id === l.id ? { ...loc, icon } : loc,
+                          ),
+                        })
+                      }
+                    />
                     <TextField
                       size="small"
                       label="Name"
@@ -379,7 +392,11 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
           >
             {c.locations.map((l) => (
               <MapPoint key={l.id} x={l.x} y={l.y}>
-                <PlacePin name={l.name} selected={picking === l.id} />
+                <PlacePin
+                  name={l.name}
+                  icon={l.icon}
+                  selected={picking === l.id}
+                />
               </MapPoint>
             ))}
           </MapCanvas>

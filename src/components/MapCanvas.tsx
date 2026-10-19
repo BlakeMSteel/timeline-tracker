@@ -6,7 +6,10 @@ import {
   type ReactNode,
 } from "react";
 import { Box, Typography } from "@mui/material";
+import { locationIcon } from "../cases/locationIcons";
 import { useObjectUrl } from "../cases/useObjectUrl";
+
+const PIN_SIZE = 26;
 
 interface MapCanvasProps {
   image: Blob | null;
@@ -184,32 +187,40 @@ export function MapPoint({
   );
 }
 
-/** A place marker: a dark dot with its name underneath. */
+/** A place marker: its icon in a dark circle, with its name underneath. */
 export function PlacePin({
   name,
+  icon,
   selected = false,
 }: {
   name: string;
+  icon?: string;
   selected?: boolean;
 }) {
+  const { Icon } = locationIcon(icon);
   return (
     <Box
       sx={{
         position: "relative",
-        width: 14,
-        height: 14,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: PIN_SIZE,
+        height: PIN_SIZE,
         borderRadius: "50%",
         bgcolor: selected ? "primary.main" : "grey.900",
+        color: "common.white",
         border: 2,
         borderColor: "common.white",
         boxShadow: 2,
       }}
     >
+      <Icon sx={{ fontSize: 15 }} />
       <Typography
         variant="caption"
         sx={{
           position: "absolute",
-          top: 14,
+          top: PIN_SIZE,
           left: "50%",
           transform: "translateX(-50%)",
           px: 0.5,

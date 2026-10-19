@@ -11,6 +11,8 @@ export interface Location {
   name: string;
   x: number;
   y: number;
+  /** A key from LOCATION_ICONS; missing on locations saved before icons existed. */
+  icon?: string;
 }
 
 /** Something an actor did. start and duration are in minutes; start counts from midnight. */
