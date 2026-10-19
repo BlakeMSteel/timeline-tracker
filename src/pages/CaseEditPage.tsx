@@ -50,6 +50,8 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
   const [c, setC] = useState(initialCase);
   const [picking, setPicking] = useState<Picking>(null);
   const [tab, setTab] = useState<SidebarTab>("locations");
+  // Actors start collapsed, except one just added.
+  const [newActorId, setNewActorId] = useState<string | null>(null);
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
   // Every change is saved straight away; IndexedDB runs the writes in order.
@@ -105,12 +107,14 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
     });
   };
 
-  const addActor = () =>
+  const addActor = () => {
+    const id = crypto.randomUUID();
+    setNewActorId(id);
     update({
       actors: [
         ...c.actors,
         {
-          id: crypto.randomUUID(),
+          id,
           name: "",
           description: "",
           color: ACTOR_COLORS[c.actors.length % ACTOR_COLORS.length],
@@ -118,6 +122,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
         },
       ],
     });
+  };
 
   const updateActor = (actor: Actor) =>
     update({ actors: c.actors.map((a) => (a.id === actor.id ? actor : a)) });
@@ -286,6 +291,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                     locations={c.locations}
                     onChange={updateActor}
                     onDelete={() => deleteActor(actor)}
+                    defaultExpanded={actor.id === newActorId}
                   />
                 ))}
               </>
