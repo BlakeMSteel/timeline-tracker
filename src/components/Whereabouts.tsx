@@ -1,14 +1,12 @@
 import { Box, Stack, Typography } from "@mui/material";
 import {
   activityAt,
-  activityEnd,
   formatTime,
-  lastActivityBefore,
+  lastActivityEndedBy,
   sortedActivities,
 } from "../cases/time";
 import type { Actor, Location } from "../cases/types";
 
-/** Where each actor is at a moment, or when they were last and next seen. */
 export default function Whereabouts({
   actors,
   locations,
@@ -33,7 +31,7 @@ export default function Whereabouts({
       )}
       {actors.map((actor) => {
         const current = activityAt(actor, time);
-        const last = current ? null : lastActivityBefore(actor, time);
+        const last = current ? null : lastActivityEndedBy(actor, time);
         const next = current
           ? null
           : sortedActivities(actor).find((a) => a.start > time);
@@ -53,7 +51,7 @@ export default function Whereabouts({
               <>
                 <Typography variant="body2">
                   At {placeName(current.locationId)} until{" "}
-                  {formatTime(activityEnd(current))}
+                  {formatTime(current.end)}
                 </Typography>
                 {current.description && (
                   <Typography variant="body2" color="text.secondary">
@@ -68,7 +66,7 @@ export default function Whereabouts({
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {last
-                    ? `Last seen at ${placeName(last.locationId)}, left ${formatTime(activityEnd(last))}`
+                    ? `Last seen at ${placeName(last.locationId)}, left ${formatTime(last.end)}`
                     : "Not seen yet"}
                   {next &&
                     ` · Next at ${placeName(next.locationId)}, ${formatTime(next.start)}`}

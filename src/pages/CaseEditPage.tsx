@@ -26,37 +26,41 @@ import { TOOLBAR_HEIGHT } from "../components/Header";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import { saveCase } from "../cases/db";
 import { DEFAULT_LOCATION_ICON } from "../cases/locationIcons";
-import { ACTOR_COLORS, type Actor, type Case } from "../cases/types";
+import {
+  ACTOR_COLORS,
+  NO_LOCATION_ID,
+  type Actor,
+  type Case,
+  type FractionOfImageSize,
+  type Location,
+} from "../cases/types";
 import { useCase } from "./useCase";
 
-/** /case/:id/edit — edits a stored case. */
 export function CaseEditPage() {
   const { id } = useParams();
   const c = useCase(id);
 
-  if (c === undefined)
+  if (c === "loading")
     return <Typography color="text.secondary">Loading…</Typography>;
-  if (c === null) return <CaseNotFound />;
+  if (c === "not-found") return <CaseNotFound />;
   return <CaseForm key={c.id} initialCase={c} />;
 }
 
-/** "new" while placing a new place; a place id while moving that place. */
-type Picking = "new" | string | null;
+const NEW_LOCATION = "new-location";
+type LocationBeingPlaced = typeof NEW_LOCATION | Location["id"] | null;
 
 type SidebarTab = "locations" | "actors";
 
-/** The vertical padding App's Container puts around every page. */
-const PAGE_PADDING = 24;
+const APP_CONTAINER_VERTICAL_PADDING = 24;
 
 function CaseForm({ initialCase }: { initialCase: Case }) {
   const [c, setC] = useState(initialCase);
-  const [picking, setPicking] = useState<Picking>(null);
+  const [locationBeingPlaced, setLocationBeingPlaced] =
+    useState<LocationBeingPlaced>(null);
   const [tab, setTab] = useState<SidebarTab>("locations");
-  // Actors start collapsed, except one just added.
-  const [newActorId, setNewActorId] = useState<string | null>(null);
+  const [justAddedActorId, setJustAddedActorId] = useState<string | null>(null);
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
-  // Every change is saved straight away; IndexedDB runs the writes in order.
   useEffect(() => {
     if (c !== initialCase) saveCase(c);
   }, [c, initialCase]);
@@ -64,8 +68,8 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
   const update = (patch: Partial<Case>) =>
     setC((prev) => ({ ...prev, ...patch }));
 
-  const handlePick = (x: number, y: number) => {
-    if (picking === "new") {
+  const handlePick = (x: FractionOfImageSize, y: FractionOfImageSize) => {
+    if (locationBeingPlaced === NEW_LOCATION) {
       update({
         locations: [
           ...c.locations,
@@ -78,14 +82,14 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
           },
         ],
       });
-    } else if (picking) {
+    } else if (locationBeingPlaced) {
       update({
         locations: c.locations.map((l) =>
-          l.id === picking ? { ...l, x, y } : l,
+          l.id === locationBeingPlaced ? { ...l, x, y } : l,
         ),
       });
     }
-    setPicking(null);
+    setLocationBeingPlaced(null);
   };
 
   const deletePlace = (placeId: string) => {
@@ -104,7 +108,9 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
       actors: c.actors.map((a) => ({
         ...a,
         activities: a.activities.map((act) =>
-          act.locationId === placeId ? { ...act, locationId: "" } : act,
+          act.locationId === placeId
+            ? { ...act, locationId: NO_LOCATION_ID }
+            : act,
         ),
       })),
     });
@@ -112,7 +118,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
 
   const addActor = () => {
     const id = crypto.randomUUID();
-    setNewActorId(id);
+    setJustAddedActorId(id);
     update({
       actors: [
         ...c.actors,
@@ -140,14 +146,10 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
     update({ actors: c.actors.filter((a) => a.id !== actor.id) });
   };
 
+  const windowHeightBelowHeader = `calc(100dvh - ${TOOLBAR_HEIGHT + APP_CONTAINER_VERTICAL_PADDING * 2}px)`;
+
   return (
-    <Stack
-      spacing={3}
-      sx={{
-        // On desktop the page fits the window: the sidebar scrolls and the map shrinks to fit.
-        height: { md: `calc(100dvh - ${TOOLBAR_HEIGHT + PAGE_PADDING * 2}px)` },
-      }}
-    >
+    <Stack spacing={3} sx={{ height: { md: windowHeightBelowHeader } }}>
       <Box
         sx={{
           display: "flex",
@@ -213,7 +215,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                   variant="outlined"
                   startIcon={<AddIcon />}
                   disabled={!c.map.image}
-                  onClick={() => setPicking("new")}
+                  onClick={() => setLocationBeingPlaced(NEW_LOCATION)}
                   sx={{ alignSelf: "flex-start" }}
                 >
                   Add location
@@ -233,7 +235,9 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                       alignItems: "center",
                       gap: 1,
                       borderColor:
-                        picking === l.id ? "primary.main" : "divider",
+                        locationBeingPlaced === l.id
+                          ? "primary.main"
+                          : "divider",
                     }}
                   >
                     <LocationIconPicker
@@ -265,8 +269,14 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                       size="small"
                       aria-label="Move location"
                       title="Move on map"
-                      color={picking === l.id ? "primary" : "default"}
-                      onClick={() => setPicking(picking === l.id ? null : l.id)}
+                      color={
+                        locationBeingPlaced === l.id ? "primary" : "default"
+                      }
+                      onClick={() =>
+                        setLocationBeingPlaced(
+                          locationBeingPlaced === l.id ? null : l.id,
+                        )
+                      }
                     >
                       <OpenWithIcon fontSize="small" />
                     </IconButton>
@@ -304,7 +314,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                     locations={c.locations}
                     onChange={updateActor}
                     onDelete={() => deleteActor(actor)}
-                    defaultExpanded={actor.id === newActorId}
+                    defaultExpanded={actor.id === justAddedActorId}
                   />
                 ))}
               </>
@@ -364,38 +374,38 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
               }}
             />
           </Button>
-          {picking && (
+          {locationBeingPlaced && (
             <Alert
               severity="info"
               action={
                 <Button
                   color="inherit"
                   size="small"
-                  onClick={() => setPicking(null)}
+                  onClick={() => setLocationBeingPlaced(null)}
                 >
                   Cancel
                 </Button>
               }
             >
               Click the map to{" "}
-              {picking === "new"
+              {locationBeingPlaced === NEW_LOCATION
                 ? "place the new location"
                 : "move this location"}
               .
             </Alert>
           )}
           <MapCanvas
-            fill={isDesktop}
+            fitToParentHeight={isDesktop}
             image={c.map.image}
             alt={c.map.name || "Map"}
-            onPick={picking ? handlePick : undefined}
+            onPickPoint={locationBeingPlaced ? handlePick : undefined}
           >
             {c.locations.map((l) => (
               <MapPoint key={l.id} x={l.x} y={l.y}>
                 <PlacePin
                   name={l.name}
                   icon={l.icon}
-                  selected={picking === l.id}
+                  selected={locationBeingPlaced === l.id}
                 />
               </MapPoint>
             ))}

@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Box, IconButton, Popover, Tooltip } from "@mui/material";
-import { LOCATION_ICONS, locationIcon } from "../cases/locationIcons";
+import {
+  LOCATION_ICONS,
+  locationIconOrDefault,
+  type LocationIconKey,
+} from "../cases/locationIcons";
 
-/** A button showing a location's icon that opens a grid of icons to choose from. */
 export default function LocationIconPicker({
   value,
   onChange,
 }: {
-  value: string | undefined;
-  onChange: (icon: string) => void;
+  value: LocationIconKey | undefined;
+  onChange: (icon: LocationIconKey) => void;
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const current = locationIcon(value);
+  const current = locationIconOrDefault(value);
 
   return (
     <>

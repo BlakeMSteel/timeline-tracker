@@ -1,7 +1,6 @@
 import { Box, type SxProps, type Theme } from "@mui/material";
 import type { ReactNode } from "react";
 
-/** Bordered container for one editable entry (a place, an actor, an activity). */
 export default function EntryBox({
   children,
   sx,

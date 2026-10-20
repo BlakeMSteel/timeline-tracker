@@ -23,22 +23,20 @@ import TimelineChart from "../components/TimelineChart";
 import Whereabouts from "../components/Whereabouts";
 import {
   activityAt,
-  activityEnd,
   formatTime,
   sortedActivities,
-  timeRange,
+  wholeHoursCoveringActivities,
 } from "../cases/time";
 import { caseTitle, type Actor, type Case } from "../cases/types";
 import { useCase } from "./useCase";
 
-/** /case/:id — the case timeline: the map, a time scrubber and everyone's movements. */
 export function CaseTimelinePage() {
   const { id } = useParams();
   const c = useCase(id);
 
-  if (c === undefined)
+  if (c === "loading")
     return <Typography color="text.secondary">Loading…</Typography>;
-  if (c === null) return <CaseNotFound />;
+  if (c === "not-found") return <CaseNotFound />;
   return <CaseTimeline key={c.id} c={c} />;
 }
 
@@ -48,7 +46,7 @@ const PLAY_STEP = 5;
 const PLAY_INTERVAL_MS = 150;
 
 function CaseTimeline({ c }: { c: Case }) {
-  const range = timeRange(c.actors);
+  const range = wholeHoursCoveringActivities(c.actors);
   const [from, to] = range;
   const [time, setTime] = useState(from);
   const [playing, setPlaying] = useState(false);
@@ -172,10 +170,14 @@ function CaseTimeline({ c }: { c: Case }) {
         }}
       >
         <MapCanvas image={c.map.image} alt={c.map.name || "Map"}>
-          {layers.includes("paths") && <Paths c={c} actors={visibleActors} />}
-          {layers.includes("pins") && <Pins c={c} actors={visibleActors} />}
+          {layers.includes("paths") && (
+            <ActorPaths c={c} actors={visibleActors} />
+          )}
+          {layers.includes("pins") && (
+            <LocationPins c={c} actors={visibleActors} />
+          )}
           {layers.includes("positions") && (
-            <Positions c={c} actors={visibleActors} time={time} />
+            <CurrentActorPositions c={c} actors={visibleActors} time={time} />
           )}
         </MapCanvas>
         <EntryBox>
@@ -236,8 +238,7 @@ function CaseTimeline({ c }: { c: Case }) {
   );
 }
 
-/** A line per actor joining their places in the order they visited them. */
-function Paths({ c, actors }: { c: Case; actors: Actor[] }) {
+function ActorPaths({ c, actors }: { c: Case; actors: Actor[] }) {
   return (
     <Box
       component="svg"
@@ -276,8 +277,7 @@ function Paths({ c, actors }: { c: Case; actors: Actor[] }) {
   );
 }
 
-/** A pin per place, listing everyone's activities there on hover. */
-function Pins({ c, actors }: { c: Case; actors: Actor[] }) {
+function LocationPins({ c, actors }: { c: Case; actors: Actor[] }) {
   return c.locations.map((l) => {
     const visits = actors
       .flatMap((actor) =>
@@ -295,7 +295,7 @@ function Pins({ c, actors }: { c: Case; actors: Actor[] }) {
               {visits.length === 0 && <div>No visits</div>}
               {visits.map(({ actor, a }) => (
                 <div key={a.id}>
-                  {formatTime(a.start)}–{formatTime(activityEnd(a))}{" "}
+                  {formatTime(a.start)}–{formatTime(a.end)}{" "}
                   <b style={{ color: actor.color, filter: "brightness(1.6)" }}>
                     {actor.name || "Unnamed actor"}
                   </b>
@@ -316,8 +316,7 @@ function Pins({ c, actors }: { c: Case; actors: Actor[] }) {
 
 const SPREAD_RADIUS = 16;
 
-/** Each accounted-for actor's marker at their current place, spread out when several share one. */
-function Positions({
+function CurrentActorPositions({
   c,
   actors,
   time,
@@ -336,19 +335,19 @@ function Positions({
     const together = present.filter((p) => p.l.id === l.id);
     const index = together.findIndex((p) => p.actor.id === actor.id);
     const angle = (index / together.length) * 2 * Math.PI - Math.PI / 2;
-    const offset: [number, number] =
+    const pixelOffset: [number, number] =
       together.length > 1
         ? [Math.cos(angle) * SPREAD_RADIUS, Math.sin(angle) * SPREAD_RADIUS]
         : [0, 0];
     return (
-      <MapPoint key={actor.id} x={l.x} y={l.y} offset={offset}>
+      <MapPoint key={actor.id} x={l.x} y={l.y} pixelOffset={pixelOffset}>
         <Tooltip
           title={
             <>
               <b>{actor.name || "Unnamed actor"}</b> at{" "}
               {l.name || "Unnamed place"}
               <br />
-              {formatTime(a.start)}–{formatTime(activityEnd(a))}
+              {formatTime(a.start)}–{formatTime(a.end)}
               {a.description && (
                 <>
                   <br />

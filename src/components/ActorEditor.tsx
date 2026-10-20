@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   IconButton,
-  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -15,28 +14,23 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import {
-  activityEnd,
-  formatDuration,
-  formatTime,
-  fromTimeInput,
-  overlappingIds,
-  sortedActivities,
-  toTimeInput,
-} from "../cases/time";
+import ActivityEditor from "./ActivityEditor";
+import { overlappingActivityIds, sortedActivities } from "../cases/time";
 import {
   ACTOR_COLORS,
+  NO_LOCATION_ID,
   type Activity,
   type Actor,
   type Location,
 } from "../cases/types";
+
+const stopCardFromToggling = (e: SyntheticEvent) => e.stopPropagation();
 
 interface ActorEditorProps {
   actor: Actor;
   locations: Location[];
   onChange: (actor: Actor) => void;
   onDelete: () => void;
-  /** Start expanded, e.g. for a newly added actor. */
   defaultExpanded?: boolean;
 }
 
@@ -48,7 +42,7 @@ export default function ActorEditor({
   defaultExpanded = false,
 }: ActorEditorProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const overlaps = overlappingIds(actor);
+  const overlaps = overlappingActivityIds(actor);
   const activities = sortedActivities(actor);
 
   const updateActivity = (id: string, patch: Partial<Activity>) =>
@@ -61,16 +55,17 @@ export default function ActorEditor({
 
   const addActivity = () => {
     const last = activities.at(-1);
+    const start = last ? last.end % 1440 : 9 * 60;
     onChange({
       ...actor,
       activities: [
         ...actor.activities,
         {
           id: crypto.randomUUID(),
-          locationId: last?.locationId ?? locations[0]?.id ?? "",
+          locationId: last?.locationId ?? locations[0]?.id ?? NO_LOCATION_ID,
           description: "",
-          start: last ? activityEnd(last) : 9 * 60,
-          duration: 30,
+          start,
+          end: start + 30,
         },
       ],
     });
@@ -103,10 +98,9 @@ export default function ActorEditor({
               value={actor.name}
               autoFocus={!actor.name}
               onChange={(e) => onChange({ ...actor, name: e.target.value })}
-              // Keep clicks and keys in the field from toggling the card.
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              onFocus={(e) => e.stopPropagation()}
+              onClick={stopCardFromToggling}
+              onKeyDown={stopCardFromToggling}
+              onFocus={stopCardFromToggling}
               slotProps={{ htmlInput: { "aria-label": "Name" } }}
               sx={{ flex: 1, "& input": { fontWeight: 600 } }}
             />
@@ -186,110 +180,23 @@ export default function ActorEditor({
             No activities yet.
           </Typography>
         )}
-        {activities.map((activity) => {
-          const overlapping = overlaps.has(activity.id);
-          return (
-            <Box
-              key={activity.id}
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1,
-                p: 1,
-                border: 1,
-                borderColor: overlapping ? "error.main" : "divider",
-                borderRadius: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr auto",
-                  gap: 1,
-                  alignItems: "center",
-                }}
-              >
-                <TextField
-                  select
-                  size="small"
-                  label="Place"
-                  value={activity.locationId}
-                  onChange={(e) =>
-                    updateActivity(activity.id, { locationId: e.target.value })
-                  }
-                  sx={{ gridColumn: "1 / -1" }}
-                >
-                  <MenuItem value="">
-                    <em>None</em>
-                  </MenuItem>
-                  {locations.map((l) => (
-                    <MenuItem key={l.id} value={l.id}>
-                      {l.name || "Unnamed place"}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  size="small"
-                  label="Start"
-                  type="time"
-                  value={toTimeInput(activity.start)}
-                  onChange={(e) => {
-                    const start = fromTimeInput(e.target.value);
-                    if (start !== null) updateActivity(activity.id, { start });
-                  }}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-                <TextField
-                  size="small"
-                  label="Minutes"
-                  type="number"
-                  value={activity.duration}
-                  onChange={(e) =>
-                    updateActivity(activity.id, {
-                      duration: Math.max(
-                        1,
-                        Math.round(Number(e.target.value)) || 1,
-                      ),
-                    })
-                  }
-                  slotProps={{ htmlInput: { min: 1, step: 5 } }}
-                />
-                <IconButton
-                  size="small"
-                  color="error"
-                  aria-label="Delete activity"
-                  onClick={() =>
-                    onChange({
-                      ...actor,
-                      activities: actor.activities.filter(
-                        (a) => a.id !== activity.id,
-                      ),
-                    })
-                  }
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-              <TextField
-                size="small"
-                label="Description"
-                value={activity.description}
-                onChange={(e) =>
-                  updateActivity(activity.id, { description: e.target.value })
-                }
-              />
-              <Typography
-                variant="caption"
-                color={overlapping ? "error" : "text.secondary"}
-              >
-                {formatTime(activity.start)} –{" "}
-                {formatTime(activityEnd(activity))} (
-                {formatDuration(activity.duration)})
-                {overlapping && " · Overlaps another activity"}
-              </Typography>
-            </Box>
-          );
-        })}
+        {activities.map((activity) => (
+          <ActivityEditor
+            key={activity.id}
+            activity={activity}
+            locations={locations}
+            overlapping={overlaps.has(activity.id)}
+            onChange={(patch) => updateActivity(activity.id, patch)}
+            onDelete={() =>
+              onChange({
+                ...actor,
+                activities: actor.activities.filter(
+                  (a) => a.id !== activity.id,
+                ),
+              })
+            }
+          />
+        ))}
         <Button
           size="small"
           startIcon={<AddIcon />}

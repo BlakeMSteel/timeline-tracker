@@ -1,28 +1,30 @@
-/** The image a case is plotted on. */
+import type { LocationIconKey } from "./locationIcons";
+
+export type MinutesFromMidnight = number;
+export type FractionOfImageSize = number;
+
 export interface CaseMap {
   name: string;
   description: string;
   image: Blob | null;
 }
 
-/** A named point on the map. x and y are fractions (0–1) of the image's width and height. */
 export interface Location {
   id: string;
   name: string;
-  x: number;
-  y: number;
-  /** A key from LOCATION_ICONS; missing on locations saved before icons existed. */
-  icon?: string;
+  x: FractionOfImageSize;
+  y: FractionOfImageSize;
+  icon?: LocationIconKey;
 }
 
-/** Something an actor did. start and duration are in minutes; start counts from midnight. */
+export const NO_LOCATION_ID = "";
+
 export interface Activity {
   id: string;
-  /** Empty when no place has been picked yet. */
   locationId: string;
   description: string;
-  start: number;
-  duration: number;
+  start: MinutesFromMidnight;
+  end: MinutesFromMidnight;
 }
 
 export interface Actor {
@@ -33,7 +35,6 @@ export interface Actor {
   activities: Activity[];
 }
 
-/** One day under investigation: a map, its places, and the actors moving through them. */
 export interface Case {
   id: string;
   map: CaseMap;

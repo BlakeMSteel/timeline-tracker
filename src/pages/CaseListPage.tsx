@@ -7,7 +7,6 @@ import EntryBox from "../components/EntryBox";
 import { deleteCase, listCases, saveCase } from "../cases/db";
 import { caseTitle, newCase, type Case } from "../cases/types";
 
-/** / — lists saved cases with create, open, edit and delete. */
 export function CaseListPage() {
   const navigate = useNavigate();
   const [cases, setCases] = useState<Case[] | null>(null);

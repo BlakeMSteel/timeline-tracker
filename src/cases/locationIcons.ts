@@ -28,14 +28,13 @@ import TrainIcon from "@mui/icons-material/Train";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
 import WaterIcon from "@mui/icons-material/Water";
 
-export interface LocationIconOption {
+interface LocationIconOption {
   key: string;
   label: string;
   Icon: SvgIconComponent;
 }
 
-/** The icons a location can show on the map. Keys are stored, so don't rename them. */
-export const LOCATION_ICONS: LocationIconOption[] = [
+export const LOCATION_ICONS = [
   { key: "place", label: "Place", Icon: PlaceIcon },
   { key: "home", label: "Home", Icon: HomeIcon },
   { key: "apartment", label: "Apartment", Icon: ApartmentIcon },
@@ -64,12 +63,15 @@ export const LOCATION_ICONS: LocationIconOption[] = [
   { key: "bus", label: "Bus", Icon: DirectionsBusIcon },
   { key: "train", label: "Train", Icon: TrainIcon },
   { key: "boat", label: "Boat", Icon: DirectionsBoatIcon },
-];
+] as const satisfies readonly LocationIconOption[];
 
-export const DEFAULT_LOCATION_ICON = "place";
+export type LocationIconKey = (typeof LOCATION_ICONS)[number]["key"];
 
-/** The icon for a stored key, falling back to the default for missing or unknown keys. */
-export function locationIcon(key: string | undefined): LocationIconOption {
+export const DEFAULT_LOCATION_ICON: LocationIconKey = "place";
+
+export function locationIconOrDefault(
+  key: LocationIconKey | undefined,
+): LocationIconOption {
   return (
     LOCATION_ICONS.find((o) => o.key === key) ??
     LOCATION_ICONS.find((o) => o.key === DEFAULT_LOCATION_ICON)!

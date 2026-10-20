@@ -1,11 +1,6 @@
 import type { MouseEvent } from "react";
 import { Box, Tooltip, Typography } from "@mui/material";
-import {
-  activityEnd,
-  formatDuration,
-  formatTime,
-  sortedActivities,
-} from "../cases/time";
+import { formatDuration, formatTime, sortedActivities } from "../cases/time";
 import type { Actor, Location } from "../cases/types";
 
 interface TimelineChartProps {
@@ -18,8 +13,10 @@ interface TimelineChartProps {
 
 const LABEL_WIDTH = 120;
 const ROW_HEIGHT = 32;
+const MAX_HOUR_LABELS = 12;
+const UNACCOUNTED_TIME_STRIPES =
+  "repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 4px, transparent 4px 8px)";
 
-/** One row per actor across the day, with a bar for each activity. Click to move the scrubber. */
 export default function TimelineChart({
   actors,
   locations,
@@ -33,8 +30,7 @@ export default function TimelineChart({
     locations.find((l) => l.id === id)?.name || "No place";
   const hours: number[] = [];
   for (let h = from; h <= to; h += 60) hours.push(h);
-  // Label every hour when there's room, otherwise every few.
-  const labelEvery = Math.ceil(hours.length / 12);
+  const hoursBetweenLabels = Math.ceil(hours.length / MAX_HOUR_LABELS);
 
   const handleTrackClick = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -54,7 +50,7 @@ export default function TimelineChart({
         <Box />
         <Box sx={{ position: "relative", height: 20 }}>
           {hours.map((h, i) =>
-            i % labelEvery === 0 ? (
+            i % hoursBetweenLabels === 0 ? (
               <Typography
                 key={h}
                 variant="caption"
@@ -100,9 +96,7 @@ export default function TimelineChart({
                 borderTop: 1,
                 borderColor: "divider",
                 cursor: "pointer",
-                // Faint stripes mark time nobody can account for.
-                backgroundImage:
-                  "repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 4px, transparent 4px 8px)",
+                backgroundImage: UNACCOUNTED_TIME_STRIPES,
               }}
             >
               {hours.map((h) => (
@@ -124,9 +118,9 @@ export default function TimelineChart({
                   title={
                     <>
                       <b>
-                        {formatTime(a.start)} – {formatTime(activityEnd(a))}
+                        {formatTime(a.start)} – {formatTime(a.end)}
                       </b>{" "}
-                      ({formatDuration(a.duration)})
+                      ({formatDuration(a.end - a.start)})
                       <br />
                       {placeName(a.locationId)}
                       {a.description && (
@@ -148,7 +142,7 @@ export default function TimelineChart({
                       top: 4,
                       bottom: 4,
                       left: `${pct(a.start)}%`,
-                      width: `${pct(activityEnd(a)) - pct(a.start)}%`,
+                      width: `${pct(a.end) - pct(a.start)}%`,
                       minWidth: 3,
                       px: 0.5,
                       bgcolor: actor.color,
