@@ -3,7 +3,7 @@ import type { Activity, Case } from "./types";
 
 type ActivityWithLegacyDuration = Activity & { duration?: number };
 
-function convertLegacyDurationsToEnds(c: Case): Case {
+export function convertLegacyDurationsToEnds(c: Case): Case {
   return {
     ...c,
     actors: c.actors.map((actor) => ({

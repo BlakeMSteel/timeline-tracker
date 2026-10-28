@@ -2,8 +2,15 @@ import { useEffect, useState } from "react";
 import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import DownloadIcon from "@mui/icons-material/Download";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { Link, useNavigate } from "react-router";
 import EntryBox from "../components/EntryBox";
+import {
+  InvalidCaseFileError,
+  downloadCaseFile,
+  readCaseFile,
+} from "../cases/caseFile";
 import { deleteCase, listCases, saveCase } from "../cases/db";
 import { caseTitle, newCase, type Case } from "../cases/types";
 
@@ -19,6 +26,20 @@ export function CaseListPage() {
     const c = newCase();
     await saveCase(c);
     navigate(`/case/${c.id}/edit`);
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const imported = await readCaseFile(file);
+      await saveCase(imported);
+      setCases(await listCases());
+    } catch (error) {
+      alert(
+        error instanceof InvalidCaseFileError
+          ? error.message
+          : `Couldn't import ${file.name}.`,
+      );
+    }
   };
 
   const handleDelete = async (c: Case) => {
@@ -41,9 +62,32 @@ export function CaseListPage() {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           Cases
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleNew}>
-          New Case
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<UploadFileIcon />}
+          >
+            Import
+            <input
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file);
+                e.target.value = "";
+              }}
+            />
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleNew}
+          >
+            New Case
+          </Button>
+        </Stack>
       </Box>
 
       {cases === null ? (
@@ -90,6 +134,14 @@ export function CaseListPage() {
                 >
                   Edit
                 </Button>
+                <IconButton
+                  size="small"
+                  aria-label="Export case"
+                  title="Export as JSON"
+                  onClick={() => downloadCaseFile(c)}
+                >
+                  <DownloadIcon fontSize="small" />
+                </IconButton>
                 <IconButton
                   size="small"
                   color="error"
