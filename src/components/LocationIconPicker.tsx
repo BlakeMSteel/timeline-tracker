@@ -25,7 +25,7 @@ export default function LocationIconPicker({
           onClick={(e) => setAnchor(e.currentTarget)}
           sx={{ border: 1, borderColor: "divider" }}
         >
-          <current.Icon fontSize="small" />
+          <current.Icon size={20} />
         </IconButton>
       </Tooltip>
       <Popover
@@ -58,7 +58,7 @@ export default function LocationIconPicker({
                     key === current.key ? "primary.main" : "transparent",
                 }}
               >
-                <Icon fontSize="small" />
+                <Icon size={20} />
               </IconButton>
             </Tooltip>
           ))}

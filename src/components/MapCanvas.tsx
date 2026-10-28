@@ -13,7 +13,10 @@ import {
 import type { FractionOfImageSize } from "../cases/types";
 import { useObjectUrl } from "../cases/useObjectUrl";
 
-const PIN_SIZE = 26;
+const PIN_SIZE = 22;
+const PIN_ICON_SIZE = 13;
+const PIN_LABEL_FONT_SIZE = 10;
+const PIN_LABEL_MAX_WIDTH = "13ch";
 
 interface MapCanvasProps {
   image: Blob | null;
@@ -213,7 +216,7 @@ export function PlacePin({
         boxShadow: 2,
       }}
     >
-      <Icon sx={{ fontSize: 15 }} />
+      <Icon size={PIN_ICON_SIZE} />
       <Typography
         variant="caption"
         sx={{
@@ -222,9 +225,12 @@ export function PlacePin({
           left: "50%",
           transform: "translateX(-50%)",
           px: 0.5,
-          whiteSpace: "nowrap",
+          width: "max-content",
+          maxWidth: PIN_LABEL_MAX_WIDTH,
+          textAlign: "center",
+          fontSize: PIN_LABEL_FONT_SIZE,
           fontWeight: 600,
-          lineHeight: 1.4,
+          lineHeight: 1.2,
           color: "common.white",
           bgcolor: "rgba(0, 0, 0, 0.65)",
           borderRadius: 0.5,

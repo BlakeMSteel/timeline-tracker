@@ -1,68 +1,98 @@
-import type { SvgIconComponent } from "@mui/icons-material";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import ApartmentIcon from "@mui/icons-material/Apartment";
-import BusinessIcon from "@mui/icons-material/Business";
-import ChurchIcon from "@mui/icons-material/Church";
-import DirectionsBoatIcon from "@mui/icons-material/DirectionsBoat";
-import DirectionsBusIcon from "@mui/icons-material/DirectionsBus";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
-import FactoryIcon from "@mui/icons-material/Factory";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import ForestIcon from "@mui/icons-material/Forest";
-import HomeIcon from "@mui/icons-material/Home";
-import HotelIcon from "@mui/icons-material/Hotel";
-import LocalBarIcon from "@mui/icons-material/LocalBar";
-import LocalCafeIcon from "@mui/icons-material/LocalCafe";
-import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
-import LocalLibraryIcon from "@mui/icons-material/LocalLibrary";
-import LocalParkingIcon from "@mui/icons-material/LocalParking";
-import LocalPoliceIcon from "@mui/icons-material/LocalPolice";
-import MuseumIcon from "@mui/icons-material/Museum";
-import ParkIcon from "@mui/icons-material/Park";
-import PlaceIcon from "@mui/icons-material/Place";
-import RestaurantIcon from "@mui/icons-material/Restaurant";
-import SchoolIcon from "@mui/icons-material/School";
-import StoreIcon from "@mui/icons-material/Store";
-import TheaterComedyIcon from "@mui/icons-material/TheaterComedy";
-import TrainIcon from "@mui/icons-material/Train";
-import WarehouseIcon from "@mui/icons-material/Warehouse";
-import WaterIcon from "@mui/icons-material/Water";
+import type { IconType } from "react-icons";
+import {
+  GiAncientRuins,
+  GiAnchor,
+  GiAnvil,
+  GiBarn,
+  GiBed,
+  GiBeerStein,
+  GiBookshelf,
+  GiBubblingFlask,
+  GiCampfire,
+  GiCastle,
+  GiCauldron,
+  GiCaveEntrance,
+  GiChest,
+  GiCrossedSwords,
+  GiCrystalBall,
+  GiDungeonGate,
+  GiForest,
+  GiGreekTemple,
+  GiHealthPotion,
+  GiHut,
+  GiMagicPortal,
+  GiMining,
+  GiMountains,
+  GiObelisk,
+  GiPalisade,
+  GiPositionMarker,
+  GiPrisoner,
+  GiShintoShrine,
+  GiShop,
+  GiSpikedDragonHead,
+  GiStoneBridge,
+  GiStoneThrone,
+  GiStoneTower,
+  GiSwamp,
+  GiTombstone,
+  GiTreehouse,
+  GiVillage,
+  GiWatchtower,
+  GiWaveCrest,
+  GiWell,
+  GiWindmill,
+  GiWoodCabin,
+} from "react-icons/gi";
 
 interface LocationIconOption {
   key: string;
   label: string;
-  Icon: SvgIconComponent;
+  Icon: IconType;
 }
 
 export const LOCATION_ICONS = [
-  { key: "place", label: "Place", Icon: PlaceIcon },
-  { key: "home", label: "Home", Icon: HomeIcon },
-  { key: "apartment", label: "Apartment", Icon: ApartmentIcon },
-  { key: "hotel", label: "Hotel", Icon: HotelIcon },
-  { key: "office", label: "Office", Icon: BusinessIcon },
-  { key: "store", label: "Shop", Icon: StoreIcon },
-  { key: "restaurant", label: "Restaurant", Icon: RestaurantIcon },
-  { key: "cafe", label: "Café", Icon: LocalCafeIcon },
-  { key: "bar", label: "Bar", Icon: LocalBarIcon },
-  { key: "bank", label: "Bank", Icon: AccountBalanceIcon },
-  { key: "police", label: "Police", Icon: LocalPoliceIcon },
-  { key: "hospital", label: "Hospital", Icon: LocalHospitalIcon },
-  { key: "school", label: "School", Icon: SchoolIcon },
-  { key: "library", label: "Library", Icon: LocalLibraryIcon },
-  { key: "church", label: "Church", Icon: ChurchIcon },
-  { key: "museum", label: "Museum", Icon: MuseumIcon },
-  { key: "theater", label: "Theater", Icon: TheaterComedyIcon },
-  { key: "gym", label: "Gym", Icon: FitnessCenterIcon },
-  { key: "park", label: "Park", Icon: ParkIcon },
-  { key: "forest", label: "Woods", Icon: ForestIcon },
-  { key: "water", label: "Water", Icon: WaterIcon },
-  { key: "warehouse", label: "Warehouse", Icon: WarehouseIcon },
-  { key: "factory", label: "Factory", Icon: FactoryIcon },
-  { key: "parking", label: "Parking", Icon: LocalParkingIcon },
-  { key: "car", label: "Car", Icon: DirectionsCarIcon },
-  { key: "bus", label: "Bus", Icon: DirectionsBusIcon },
-  { key: "train", label: "Train", Icon: TrainIcon },
-  { key: "boat", label: "Boat", Icon: DirectionsBoatIcon },
+  { key: "place", label: "Place", Icon: GiPositionMarker },
+  { key: "castle", label: "Castle", Icon: GiCastle },
+  { key: "tower", label: "Tower", Icon: GiStoneTower },
+  { key: "fort", label: "Fort", Icon: GiPalisade },
+  { key: "watchtower", label: "Watchtower", Icon: GiWatchtower },
+  { key: "ruins", label: "Ruins", Icon: GiAncientRuins },
+  { key: "home", label: "Cottage", Icon: GiWoodCabin },
+  { key: "hut", label: "Hut", Icon: GiHut },
+  { key: "village", label: "Village", Icon: GiVillage },
+  { key: "treehouse", label: "Treehouse", Icon: GiTreehouse },
+  { key: "bar", label: "Tavern", Icon: GiBeerStein },
+  { key: "inn", label: "Inn", Icon: GiBed },
+  { key: "store", label: "Market", Icon: GiShop },
+  { key: "blacksmith", label: "Blacksmith", Icon: GiAnvil },
+  { key: "alchemist", label: "Alchemist", Icon: GiBubblingFlask },
+  { key: "hospital", label: "Healer", Icon: GiHealthPotion },
+  { key: "witch", label: "Witch's hut", Icon: GiCauldron },
+  { key: "seer", label: "Seer", Icon: GiCrystalBall },
+  { key: "church", label: "Temple", Icon: GiGreekTemple },
+  { key: "shrine", label: "Shrine", Icon: GiShintoShrine },
+  { key: "library", label: "Library", Icon: GiBookshelf },
+  { key: "bank", label: "Treasury", Icon: GiChest },
+  { key: "barracks", label: "Barracks", Icon: GiCrossedSwords },
+  { key: "throne", label: "Throne room", Icon: GiStoneThrone },
+  { key: "prison", label: "Prison", Icon: GiPrisoner },
+  { key: "graveyard", label: "Graveyard", Icon: GiTombstone },
+  { key: "dungeon", label: "Dungeon", Icon: GiDungeonGate },
+  { key: "cave", label: "Cave", Icon: GiCaveEntrance },
+  { key: "mine", label: "Mine", Icon: GiMining },
+  { key: "lair", label: "Dragon's lair", Icon: GiSpikedDragonHead },
+  { key: "portal", label: "Portal", Icon: GiMagicPortal },
+  { key: "monument", label: "Monument", Icon: GiObelisk },
+  { key: "forest", label: "Forest", Icon: GiForest },
+  { key: "mountain", label: "Mountains", Icon: GiMountains },
+  { key: "swamp", label: "Swamp", Icon: GiSwamp },
+  { key: "water", label: "Lake", Icon: GiWaveCrest },
+  { key: "well", label: "Well", Icon: GiWell },
+  { key: "camp", label: "Camp", Icon: GiCampfire },
+  { key: "farm", label: "Farm", Icon: GiBarn },
+  { key: "mill", label: "Windmill", Icon: GiWindmill },
+  { key: "bridge", label: "Bridge", Icon: GiStoneBridge },
+  { key: "boat", label: "Docks", Icon: GiAnchor },
 ] as const satisfies readonly LocationIconOption[];
 
 export type LocationIconKey = (typeof LOCATION_ICONS)[number]["key"];
