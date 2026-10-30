@@ -15,9 +15,9 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { Link, useParams } from "react-router";
 import CaseNotFound from "../components/CaseNotFound";
 import EntryBox from "../components/EntryBox";
+import LocationsSidebar from "../components/LocationsSidebar";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import TimelineChart from "../components/TimelineChart";
-import Whereabouts from "../components/Whereabouts";
 import {
   activityAt,
   formatTime,
@@ -151,7 +151,11 @@ function CaseTimeline({ c }: { c: Case }) {
           <CurrentActorPositions c={c} actors={c.actors} time={time} />
         </MapCanvas>
         <EntryBox>
-          <Whereabouts actors={c.actors} locations={c.locations} time={time} />
+          <LocationsSidebar
+            locations={c.locations}
+            actors={c.actors}
+            time={time}
+          />
         </EntryBox>
       </Box>
 
