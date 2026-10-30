@@ -2,12 +2,9 @@ import { useEffect, useState } from "react";
 import {
   Box,
   Button,
-  Chip,
   IconButton,
   Slider,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -40,8 +37,6 @@ export function CaseTimelinePage() {
   return <CaseTimeline key={c.id} c={c} />;
 }
 
-type Layer = "positions" | "paths" | "pins";
-
 const PLAY_STEP = 5;
 const PLAY_INTERVAL_MS = 150;
 
@@ -50,10 +45,7 @@ function CaseTimeline({ c }: { c: Case }) {
   const [from, to] = range;
   const [time, setTime] = useState(from);
   const [playing, setPlaying] = useState(false);
-  const [layers, setLayers] = useState<Layer[]>(["positions", "paths", "pins"]);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const visibleActors = c.actors.filter((a) => !hidden.has(a.id));
   const isPlaying = playing && time < to;
 
   useEffect(() => {
@@ -73,14 +65,6 @@ function CaseTimeline({ c }: { c: Case }) {
       setPlaying(true);
     }
   };
-
-  const toggleActor = (actorId: string) =>
-    setHidden((prev) => {
-      const next = new Set(prev);
-      if (next.has(actorId)) next.delete(actorId);
-      else next.add(actorId);
-      return next;
-    });
 
   const marks = [];
   for (let h = from; h <= to; h += 60) marks.push({ value: h });
@@ -120,75 +104,6 @@ function CaseTimeline({ c }: { c: Case }) {
         )}
       </Box>
 
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 1,
-        }}
-      >
-        <ToggleButtonGroup
-          size="small"
-          value={layers}
-          onChange={(_, value: Layer[]) => setLayers(value)}
-          aria-label="Map layers"
-        >
-          <ToggleButton value="positions">Positions</ToggleButton>
-          <ToggleButton value="paths">Paths</ToggleButton>
-          <ToggleButton value="pins">Places</ToggleButton>
-        </ToggleButtonGroup>
-        {c.actors.map((actor) => {
-          const shown = !hidden.has(actor.id);
-          return (
-            <Chip
-              key={actor.id}
-              label={actor.name || "Unnamed actor"}
-              onClick={() => toggleActor(actor.id)}
-              variant={shown ? "filled" : "outlined"}
-              sx={{
-                fontWeight: 600,
-                bgcolor: shown ? actor.color : undefined,
-                color: shown ? "common.white" : "text.secondary",
-                borderColor: actor.color,
-                "&:hover": {
-                  bgcolor: shown ? actor.color : undefined,
-                  opacity: 0.85,
-                },
-              }}
-            />
-          );
-        })}
-      </Box>
-
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 300px" },
-          gap: 2,
-          alignItems: "start",
-        }}
-      >
-        <MapCanvas image={c.map.image} alt={c.map.name || "Map"}>
-          {layers.includes("paths") && (
-            <ActorPaths c={c} actors={visibleActors} />
-          )}
-          {layers.includes("pins") && (
-            <LocationPins c={c} actors={visibleActors} />
-          )}
-          {layers.includes("positions") && (
-            <CurrentActorPositions c={c} actors={visibleActors} time={time} />
-          )}
-        </MapCanvas>
-        <EntryBox>
-          <Whereabouts
-            actors={visibleActors}
-            locations={c.locations}
-            time={time}
-          />
-        </EntryBox>
-      </Box>
-
       <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
         <IconButton
           color="primary"
@@ -222,9 +137,27 @@ function CaseTimeline({ c }: { c: Case }) {
         </Typography>
       </Stack>
 
-      {visibleActors.length > 0 && (
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 300px" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        <MapCanvas image={c.map.image} alt={c.map.name || "Map"}>
+          <ActorPaths c={c} actors={c.actors} />
+          <LocationPins c={c} actors={c.actors} />
+          <CurrentActorPositions c={c} actors={c.actors} time={time} />
+        </MapCanvas>
+        <EntryBox>
+          <Whereabouts actors={c.actors} locations={c.locations} time={time} />
+        </EntryBox>
+      </Box>
+
+      {c.actors.length > 0 && (
         <TimelineChart
-          actors={visibleActors}
+          actors={c.actors}
           locations={c.locations}
           range={range}
           time={time}
