@@ -315,6 +315,13 @@ function LocationPins({ c, actors }: { c: Case; actors: Actor[] }) {
 }
 
 const SPREAD_RADIUS = 16;
+const ACTOR_MARKER_SIZE = 28;
+
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  return words.map((word) => word.charAt(0).toUpperCase()).join("");
+}
 
 function CurrentActorPositions({
   c,
@@ -362,9 +369,10 @@ function CurrentActorPositions({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
+              minWidth: ACTOR_MARKER_SIZE,
+              height: ACTOR_MARKER_SIZE,
+              px: 0.5,
+              borderRadius: ACTOR_MARKER_SIZE / 2 + "px",
               bgcolor: actor.color,
               color: "common.white",
               border: 2,
@@ -372,10 +380,12 @@ function CurrentActorPositions({
               boxShadow: 3,
               fontWeight: 700,
               fontSize: 13,
+              letterSpacing: -0.3,
+              whiteSpace: "nowrap",
               cursor: "help",
             }}
           >
-            {(actor.name || "?").charAt(0).toUpperCase()}
+            {initials(actor.name)}
           </Box>
         </Tooltip>
       </MapPoint>
