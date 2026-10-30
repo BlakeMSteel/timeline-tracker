@@ -15,6 +15,7 @@ export interface Location {
   x: FractionOfImageSize;
   y: FractionOfImageSize;
   icon?: LocationIconKey;
+  details?: string;
 }
 
 export const NO_LOCATION_ID = "";

@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  IconButton,
   Stack,
   Tab,
   Tabs,
@@ -14,14 +13,11 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import DeleteIcon from "@mui/icons-material/Delete";
-import OpenWithIcon from "@mui/icons-material/OpenWith";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Link, useParams } from "react-router";
 import ActorEditor from "../components/ActorEditor";
 import CaseNotFound from "../components/CaseNotFound";
-import EntryBox from "../components/EntryBox";
-import LocationIconPicker from "../components/LocationIconPicker";
+import LocationEditor from "../components/LocationEditor";
 import { TOOLBAR_HEIGHT } from "../components/Header";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import { saveCase } from "../cases/db";
@@ -79,6 +75,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
             x,
             y,
             icon: DEFAULT_LOCATION_ICON,
+            details: "",
           },
         ],
       });
@@ -91,6 +88,13 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
     }
     setLocationBeingPlaced(null);
   };
+
+  const updateLocation = (locationId: string, patch: Partial<Location>) =>
+    update({
+      locations: c.locations.map((l) =>
+        l.id === locationId ? { ...l, ...patch } : l,
+      ),
+    });
 
   const deletePlace = (placeId: string) => {
     const uses = c.actors
@@ -228,67 +232,18 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                   </Typography>
                 )}
                 {c.locations.map((l) => (
-                  <EntryBox
+                  <LocationEditor
                     key={l.id}
-                    sx={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 1,
-                      borderColor:
-                        locationBeingPlaced === l.id
-                          ? "primary.main"
-                          : "divider",
-                    }}
-                  >
-                    <LocationIconPicker
-                      value={l.icon}
-                      onChange={(icon) =>
-                        update({
-                          locations: c.locations.map((loc) =>
-                            loc.id === l.id ? { ...loc, icon } : loc,
-                          ),
-                        })
-                      }
-                    />
-                    <TextField
-                      size="small"
-                      label="Name"
-                      value={l.name}
-                      onChange={(e) =>
-                        update({
-                          locations: c.locations.map((loc) =>
-                            loc.id === l.id
-                              ? { ...loc, name: e.target.value }
-                              : loc,
-                          ),
-                        })
-                      }
-                      sx={{ flex: 1 }}
-                    />
-                    <IconButton
-                      size="small"
-                      aria-label="Move location"
-                      title="Move on map"
-                      color={
-                        locationBeingPlaced === l.id ? "primary" : "default"
-                      }
-                      onClick={() =>
-                        setLocationBeingPlaced(
-                          locationBeingPlaced === l.id ? null : l.id,
-                        )
-                      }
-                    >
-                      <OpenWithIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      aria-label="Delete location"
-                      onClick={() => deletePlace(l.id)}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </EntryBox>
+                    location={l}
+                    isBeingMoved={locationBeingPlaced === l.id}
+                    onChange={(patch) => updateLocation(l.id, patch)}
+                    onToggleMove={() =>
+                      setLocationBeingPlaced(
+                        locationBeingPlaced === l.id ? null : l.id,
+                      )
+                    }
+                    onDelete={() => deletePlace(l.id)}
+                  />
                 ))}
               </>
             ) : (
