@@ -46,6 +46,20 @@ const NEW_LOCATION = "new-location";
 type LocationBeingPlaced = typeof NEW_LOCATION | Location["id"] | null;
 
 type SidebarTab = "locations" | "actors";
+type MainTab = "map" | "scenes";
+
+const tabbedPanelSx = {
+  display: "flex",
+  flexDirection: "column",
+  border: 1,
+  borderColor: "divider",
+  borderRadius: 1,
+  bgcolor: "background.paper",
+  minWidth: 0,
+  minHeight: 0,
+} as const;
+
+const tabsSx = { borderBottom: 1, borderColor: "divider", flexShrink: 0 };
 
 const APP_CONTAINER_VERTICAL_PADDING = 24;
 
@@ -53,9 +67,20 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
   const [c, setC] = useState(initialCase);
   const [locationBeingPlaced, setLocationBeingPlaced] =
     useState<LocationBeingPlaced>(null);
-  const [tab, setTab] = useState<SidebarTab>("locations");
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("locations");
+  const [mainTab, setMainTab] = useState<MainTab>("map");
   const [justAddedActorId, setJustAddedActorId] = useState<string | null>(null);
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("md"));
+
+  const startPlacingLocation = (location: LocationBeingPlaced) => {
+    setMainTab("map");
+    setLocationBeingPlaced(location);
+  };
+
+  const changeMainTab = (nextTab: MainTab) => {
+    setLocationBeingPlaced(null);
+    setMainTab(nextTab);
+  };
 
   useEffect(() => {
     if (c !== initialCase) saveCase(c);
@@ -187,23 +212,12 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
           minHeight: 0,
         }}
       >
-        <Box
-          sx={{
-            order: { xs: 2, md: 1 },
-            display: "flex",
-            flexDirection: "column",
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 1,
-            bgcolor: "background.paper",
-            minHeight: 0,
-          }}
-        >
+        <Box sx={{ ...tabbedPanelSx, order: { xs: 2, md: 1 } }}>
           <Tabs
-            value={tab}
-            onChange={(_, value: SidebarTab) => setTab(value)}
+            value={sidebarTab}
+            onChange={(_, value: SidebarTab) => setSidebarTab(value)}
             variant="fullWidth"
-            sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0 }}
+            sx={tabsSx}
           >
             <Tab
               value="locations"
@@ -212,14 +226,14 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
             <Tab value="actors" label={`Actors (${c.actors.length})`} />
           </Tabs>
           <Stack spacing={1.5} sx={{ p: 1.5, overflowY: "auto" }}>
-            {tab === "locations" ? (
+            {sidebarTab === "locations" ? (
               <>
                 <Button
                   size="small"
                   variant="outlined"
                   startIcon={<AddIcon />}
                   disabled={!c.map.image}
-                  onClick={() => setLocationBeingPlaced(NEW_LOCATION)}
+                  onClick={() => startPlacingLocation(NEW_LOCATION)}
                   sx={{ alignSelf: "flex-start" }}
                 >
                   Add location
@@ -238,7 +252,7 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                     isBeingMoved={locationBeingPlaced === l.id}
                     onChange={(patch) => updateLocation(l.id, patch)}
                     onToggleMove={() =>
-                      setLocationBeingPlaced(
+                      startPlacingLocation(
                         locationBeingPlaced === l.id ? null : l.id,
                       )
                     }
@@ -277,95 +291,106 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
           </Stack>
         </Box>
 
-        <Stack
-          spacing={2}
-          sx={{ order: { xs: 1, md: 2 }, minWidth: 0, minHeight: 0 }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Map
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" },
-              gap: 2,
-            }}
+        <Box sx={{ ...tabbedPanelSx, order: { xs: 1, md: 2 } }}>
+          <Tabs
+            value={mainTab}
+            onChange={(_, value: MainTab) => changeMainTab(value)}
+            variant="fullWidth"
+            sx={tabsSx}
           >
-            <TextField
-              size="small"
-              label="Name"
-              value={c.map.name}
-              onChange={(e) =>
-                update({ map: { ...c.map, name: e.target.value } })
-              }
-            />
-            <TextField
-              size="small"
-              label="Description"
-              multiline
-              maxRows={4}
-              value={c.map.description}
-              onChange={(e) =>
-                update({ map: { ...c.map, description: e.target.value } })
-              }
-            />
-          </Box>
-          <Button
-            component="label"
-            size="small"
-            variant="outlined"
-            startIcon={<AddPhotoAlternateIcon />}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            {c.map.image ? "Replace image" : "Add image"}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) update({ map: { ...c.map, image: file } });
-                e.target.value = "";
-              }}
-            />
-          </Button>
-          {locationBeingPlaced && (
-            <Alert
-              severity="info"
-              action={
-                <Button
-                  color="inherit"
+            <Tab value="map" label="Map" />
+            <Tab value="scenes" label="Scenes" />
+          </Tabs>
+          {mainTab === "scenes" ? (
+            <Typography color="text.secondary" sx={{ p: 1.5 }}>
+              Scenes aren't available yet.
+            </Typography>
+          ) : (
+            <Stack spacing={2} sx={{ p: 1.5, flex: 1, minHeight: 0 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" },
+                  gap: 2,
+                }}
+              >
+                <TextField
                   size="small"
-                  onClick={() => setLocationBeingPlaced(null)}
-                >
-                  Cancel
-                </Button>
-              }
-            >
-              Click the map to{" "}
-              {locationBeingPlaced === NEW_LOCATION
-                ? "place the new location"
-                : "move this location"}
-              .
-            </Alert>
-          )}
-          <MapCanvas
-            fitToParentHeight={isDesktop}
-            image={c.map.image}
-            alt={c.map.name || "Map"}
-            onPickPoint={locationBeingPlaced ? handlePick : undefined}
-          >
-            {c.locations.map((l) => (
-              <MapPoint key={l.id} x={l.x} y={l.y}>
-                <PlacePin
-                  name={l.name}
-                  icon={l.icon}
-                  selected={locationBeingPlaced === l.id}
+                  label="Name"
+                  value={c.map.name}
+                  onChange={(e) =>
+                    update({ map: { ...c.map, name: e.target.value } })
+                  }
                 />
-              </MapPoint>
-            ))}
-          </MapCanvas>
-        </Stack>
+                <TextField
+                  size="small"
+                  label="Description"
+                  multiline
+                  maxRows={4}
+                  value={c.map.description}
+                  onChange={(e) =>
+                    update({ map: { ...c.map, description: e.target.value } })
+                  }
+                />
+              </Box>
+              <Button
+                component="label"
+                size="small"
+                variant="outlined"
+                startIcon={<AddPhotoAlternateIcon />}
+                sx={{ alignSelf: "flex-start" }}
+              >
+                {c.map.image ? "Replace image" : "Add image"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) update({ map: { ...c.map, image: file } });
+                    e.target.value = "";
+                  }}
+                />
+              </Button>
+              {locationBeingPlaced && (
+                <Alert
+                  severity="info"
+                  action={
+                    <Button
+                      color="inherit"
+                      size="small"
+                      onClick={() => setLocationBeingPlaced(null)}
+                    >
+                      Cancel
+                    </Button>
+                  }
+                >
+                  Click the map to{" "}
+                  {locationBeingPlaced === NEW_LOCATION
+                    ? "place the new location"
+                    : "move this location"}
+                  .
+                </Alert>
+              )}
+              <MapCanvas
+                fitToParentHeight={isDesktop}
+                image={c.map.image}
+                alt={c.map.name || "Map"}
+                onPickPoint={locationBeingPlaced ? handlePick : undefined}
+              >
+                {c.locations.map((l) => (
+                  <MapPoint key={l.id} x={l.x} y={l.y}>
+                    <PlacePin
+                      name={l.name}
+                      icon={l.icon}
+                      selected={locationBeingPlaced === l.id}
+                    />
+                  </MapPoint>
+                ))}
+              </MapCanvas>
+            </Stack>
+          )}
+        </Box>
       </Box>
     </Stack>
   );
