@@ -1,5 +1,11 @@
 import { upgradeStoredCase } from "./db";
-import { caseTitle, type Actor, type Case } from "./types";
+import { descriptionsForEveryScene } from "./scenes";
+import {
+  caseTitle,
+  type Actor,
+  type Case,
+  type SceneDescription,
+} from "./types";
 
 const CASE_FILE_FORMAT = "timeline-tracker-case";
 const CASE_FILE_VERSION = 1;
@@ -7,9 +13,13 @@ const DOWNLOAD_URL_LIFETIME_MS = 10_000;
 
 type ActorWithImageDataUrl = Omit<Actor, "image"> & { image?: string };
 
-type CaseWithImageDataUrls = Omit<Case, "map" | "actors"> & {
+type CaseWithImageDataUrls = Omit<
+  Case,
+  "map" | "actors" | "sceneDescriptions"
+> & {
   map: Omit<Case["map"], "image"> & { image: string | null };
   actors: ActorWithImageDataUrl[];
+  sceneDescriptions?: SceneDescription[];
 };
 
 interface CaseFile {
@@ -47,6 +57,7 @@ export async function serializeCase(c: Case): Promise<string> {
     version: CASE_FILE_VERSION,
     case: {
       ...c,
+      sceneDescriptions: descriptionsForEveryScene(c),
       map: {
         ...c.map,
         image: c.map.image ? await blobToDataUrl(c.map.image) : null,
@@ -106,10 +117,11 @@ export async function readCaseFile(
       `${file.name} was made by a newer version of Timeline Tracker.`,
     );
 
-  const { map, actors, ...rest } = parsed.case;
+  const { map, actors, sceneDescriptions, ...rest } = parsed.case;
   return upgradeStoredCase({
     ...rest,
     id: crypto.randomUUID(),
+    sceneDescriptions: sceneDescriptions?.filter((d) => d.text !== ""),
     map: {
       name: map.name ?? "",
       description: map.description ?? "",

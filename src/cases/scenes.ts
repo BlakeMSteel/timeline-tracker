@@ -196,6 +196,20 @@ export function reconcileSceneDescriptions(c: Case): Case {
   };
 }
 
+export function descriptionsForEveryScene(c: Case): SceneDescription[] {
+  const reconciled = reconcileSceneDescriptions(c);
+  const blanks = deriveScenes(reconciled)
+    .filter((scene) => !descriptionForScene(reconciled, scene))
+    .map((scene) => ({
+      id: crypto.randomUUID(),
+      ...scene,
+      text: "",
+      reviewNotes: [],
+      attached: true,
+    }));
+  return [...reconciled.sceneDescriptions, ...blanks];
+}
+
 export function sceneAt(
   scenes: Scene[],
   locationId: string,
