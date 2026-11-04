@@ -4,6 +4,7 @@ import {
   caseTitle,
   type Actor,
   type Case,
+  type Location,
   type SceneDescription,
 } from "./types";
 
@@ -11,14 +12,15 @@ const CASE_FILE_FORMAT = "timeline-tracker-case";
 const CASE_FILE_VERSION = 1;
 const DOWNLOAD_URL_LIFETIME_MS = 10_000;
 
-type ActorWithImageDataUrl = Omit<Actor, "image"> & { image?: string };
+type WithImageDataUrl<T> = Omit<T, "image"> & { image?: string };
 
 type CaseWithImageDataUrls = Omit<
   Case,
-  "map" | "actors" | "sceneDescriptions"
+  "map" | "actors" | "locations" | "sceneDescriptions"
 > & {
   map: Omit<Case["map"], "image"> & { image: string | null };
-  actors: ActorWithImageDataUrl[];
+  actors: WithImageDataUrl<Actor>[];
+  locations: WithImageDataUrl<Location>[];
   sceneDescriptions?: SceneDescription[];
 };
 
@@ -51,6 +53,26 @@ function fileNameFor(c: Case): string {
   return `${slug || "case"}.json`;
 }
 
+function imagesToDataUrls<T extends { image?: Blob }>(
+  items: T[],
+): Promise<WithImageDataUrl<T>[]> {
+  return Promise.all(
+    items.map(async ({ image, ...item }) => ({
+      ...item,
+      ...(image && { image: await blobToDataUrl(image) }),
+    })),
+  );
+}
+
+function dataUrlsToImages<T>(items: WithImageDataUrl<T>[]) {
+  return Promise.all(
+    items.map(async ({ image, ...item }) => ({
+      ...item,
+      ...(image && { image: await dataUrlToBlob(image) }),
+    })),
+  ) as Promise<T[]>;
+}
+
 export async function serializeCase(c: Case): Promise<string> {
   const file: CaseFile = {
     format: CASE_FILE_FORMAT,
@@ -62,12 +84,8 @@ export async function serializeCase(c: Case): Promise<string> {
         ...c.map,
         image: c.map.image ? await blobToDataUrl(c.map.image) : null,
       },
-      actors: await Promise.all(
-        c.actors.map(async ({ image, ...actor }) => ({
-          ...actor,
-          ...(image && { image: await blobToDataUrl(image) }),
-        })),
-      ),
+      actors: await imagesToDataUrls(c.actors),
+      locations: await imagesToDataUrls(c.locations),
     },
   };
   return JSON.stringify(file, null, 2);
@@ -117,7 +135,7 @@ export async function readCaseFile(
       `${file.name} was made by a newer version of Timeline Tracker.`,
     );
 
-  const { map, actors, sceneDescriptions, ...rest } = parsed.case;
+  const { map, actors, locations, sceneDescriptions, ...rest } = parsed.case;
   return upgradeStoredCase({
     ...rest,
     id: crypto.randomUUID(),
@@ -127,12 +145,8 @@ export async function readCaseFile(
       description: map.description ?? "",
       image: map.image ? await dataUrlToBlob(map.image) : null,
     },
-    actors: await Promise.all(
-      actors.map(async ({ image, ...actor }) => ({
-        ...actor,
-        ...(image && { image: await dataUrlToBlob(image) }),
-      })),
-    ),
+    actors: await dataUrlsToImages<Actor>(actors),
+    locations: await dataUrlsToImages<Location>(locations),
     updatedAt: Date.now(),
   });
 }

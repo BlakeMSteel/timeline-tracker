@@ -10,6 +10,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Stack,
   TextField,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -17,6 +18,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import OpenWithIcon from "@mui/icons-material/OpenWith";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
 import EntryBox from "./EntryBox";
+import ImageInput from "./ImageInput";
 import LocationIconPicker from "./LocationIconPicker";
 import type { Location } from "../cases/types";
 
@@ -110,16 +112,22 @@ export default function LocationEditor({
       >
         <DialogTitle>{location.name || "Unnamed place"}</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            multiline
-            minRows={4}
-            label="Details"
-            value={location.details ?? ""}
-            onChange={(e) => onChange({ details: e.target.value })}
-            sx={{ mt: 1 }}
-          />
+          <Stack spacing={1.5} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              fullWidth
+              multiline
+              minRows={4}
+              label="Details"
+              value={location.details ?? ""}
+              onChange={(e) => onChange({ details: e.target.value })}
+            />
+            <ImageInput
+              value={location.image}
+              alt={location.name || "Location"}
+              onChange={(image) => onChange({ image })}
+            />
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditingDetails(false)}>Done</Button>
