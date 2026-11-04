@@ -33,6 +33,7 @@ export interface Actor {
   name: string;
   description: string;
   color: string;
+  image?: Blob;
   activities: Activity[];
 }
 

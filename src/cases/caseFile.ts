@@ -1,18 +1,21 @@
 import { upgradeStoredCase } from "./db";
-import { caseTitle, type Case } from "./types";
+import { caseTitle, type Actor, type Case } from "./types";
 
 const CASE_FILE_FORMAT = "timeline-tracker-case";
 const CASE_FILE_VERSION = 1;
 const DOWNLOAD_URL_LIFETIME_MS = 10_000;
 
-type CaseWithImageDataUrl = Omit<Case, "map"> & {
+type ActorWithImageDataUrl = Omit<Actor, "image"> & { image?: string };
+
+type CaseWithImageDataUrls = Omit<Case, "map" | "actors"> & {
   map: Omit<Case["map"], "image"> & { image: string | null };
+  actors: ActorWithImageDataUrl[];
 };
 
 interface CaseFile {
   format: typeof CASE_FILE_FORMAT;
   version: number;
-  case: CaseWithImageDataUrl;
+  case: CaseWithImageDataUrls;
 }
 
 export class InvalidCaseFileError extends Error {}
@@ -38,7 +41,7 @@ function fileNameFor(c: Case): string {
   return `${slug || "case"}.json`;
 }
 
-export async function downloadCaseFile(c: Case): Promise<void> {
+export async function serializeCase(c: Case): Promise<string> {
   const file: CaseFile = {
     format: CASE_FILE_FORMAT,
     version: CASE_FILE_VERSION,
@@ -48,10 +51,20 @@ export async function downloadCaseFile(c: Case): Promise<void> {
         ...c.map,
         image: c.map.image ? await blobToDataUrl(c.map.image) : null,
       },
+      actors: await Promise.all(
+        c.actors.map(async ({ image, ...actor }) => ({
+          ...actor,
+          ...(image && { image: await blobToDataUrl(image) }),
+        })),
+      ),
     },
   };
+  return JSON.stringify(file, null, 2);
+}
+
+export async function downloadCaseFile(c: Case): Promise<void> {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(file, null, 2)], { type: "application/json" }),
+    new Blob([await serializeCase(c)], { type: "application/json" }),
   );
   const link = document.createElement("a");
   link.href = url;
@@ -75,7 +88,9 @@ function isCaseFile(value: unknown): value is CaseFile {
   );
 }
 
-export async function readCaseFile(file: File): Promise<Case> {
+export async function readCaseFile(
+  file: Pick<File, "name" | "text">,
+): Promise<Case> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await file.text());
@@ -91,7 +106,7 @@ export async function readCaseFile(file: File): Promise<Case> {
       `${file.name} was made by a newer version of Timeline Tracker.`,
     );
 
-  const { map, ...rest } = parsed.case;
+  const { map, actors, ...rest } = parsed.case;
   return upgradeStoredCase({
     ...rest,
     id: crypto.randomUUID(),
@@ -100,6 +115,12 @@ export async function readCaseFile(file: File): Promise<Case> {
       description: map.description ?? "",
       image: map.image ? await dataUrlToBlob(map.image) : null,
     },
+    actors: await Promise.all(
+      actors.map(async ({ image, ...actor }) => ({
+        ...actor,
+        ...(image && { image: await dataUrlToBlob(image) }),
+      })),
+    ),
     updatedAt: Date.now(),
   });
 }

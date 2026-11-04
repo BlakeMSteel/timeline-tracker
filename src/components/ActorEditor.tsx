@@ -11,11 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import ActivityEditor from "./ActivityEditor";
 import { overlappingActivityIds, sortedActivities } from "../cases/time";
+import { useObjectUrl } from "../cases/useObjectUrl";
 import {
   ACTOR_COLORS,
   NO_LOCATION_ID,
@@ -23,6 +25,8 @@ import {
   type Actor,
   type Location,
 } from "../cases/types";
+
+const IMAGE_PREVIEW_MAX_HEIGHT = 160;
 
 const stopCardFromToggling = (e: SyntheticEvent) => e.stopPropagation();
 
@@ -42,6 +46,7 @@ export default function ActorEditor({
   defaultExpanded = false,
 }: ActorEditorProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const imageUrl = useObjectUrl(actor.image ?? null);
   const overlaps = overlappingActivityIds(actor);
   const activities = sortedActivities(actor);
 
@@ -171,6 +176,51 @@ export default function ActorEditor({
           value={actor.description}
           onChange={(e) => onChange({ ...actor, description: e.target.value })}
         />
+        <Stack direction="row" spacing={1}>
+          <Button
+            component="label"
+            size="small"
+            variant="outlined"
+            startIcon={<AddPhotoAlternateIcon />}
+          >
+            {actor.image ? "Replace image" : "Add image"}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onChange({ ...actor, image: file });
+                e.target.value = "";
+              }}
+            />
+          </Button>
+          {actor.image && (
+            <Button
+              size="small"
+              color="error"
+              onClick={() => onChange({ ...actor, image: undefined })}
+            >
+              Remove image
+            </Button>
+          )}
+        </Stack>
+        {imageUrl && (
+          <Box
+            component="img"
+            src={imageUrl}
+            alt={actor.name || "Actor"}
+            sx={{
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: IMAGE_PREVIEW_MAX_HEIGHT,
+              alignSelf: "flex-start",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 1,
+            }}
+          />
+        )}
 
         <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1 }}>
           Activities
