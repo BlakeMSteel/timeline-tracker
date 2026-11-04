@@ -1,4 +1,4 @@
-import { convertLegacyDurationsToEnds } from "./db";
+import { upgradeStoredCase } from "./db";
 import { caseTitle, type Case } from "./types";
 
 const CASE_FILE_FORMAT = "timeline-tracker-case";
@@ -92,7 +92,7 @@ export async function readCaseFile(file: File): Promise<Case> {
     );
 
   const { map, ...rest } = parsed.case;
-  return convertLegacyDurationsToEnds({
+  return upgradeStoredCase({
     ...rest,
     id: crypto.randomUUID(),
     map: {

@@ -36,11 +36,23 @@ export interface Actor {
   activities: Activity[];
 }
 
+export interface SceneDescription {
+  id: string;
+  locationId: string;
+  start: MinutesFromMidnight;
+  end: MinutesFromMidnight;
+  actorIds: string[];
+  text: string;
+  reviewNotes: string[];
+  attached: boolean;
+}
+
 export interface Case {
   id: string;
   map: CaseMap;
   locations: Location[];
   actors: Actor[];
+  sceneDescriptions: SceneDescription[];
   updatedAt: number;
 }
 
@@ -61,6 +73,7 @@ export function newCase(): Case {
     map: { name: "", description: "", image: null },
     locations: [],
     actors: [],
+    sceneDescriptions: [],
     updatedAt: Date.now(),
   };
 }

@@ -3,10 +3,14 @@ import type { Activity, Case } from "./types";
 
 type ActivityWithLegacyDuration = Activity & { duration?: number };
 
-export function convertLegacyDurationsToEnds(c: Case): Case {
+export function upgradeStoredCase(
+  stored: Omit<Case, "sceneDescriptions"> &
+    Partial<Pick<Case, "sceneDescriptions">>,
+): Case {
   return {
-    ...c,
-    actors: c.actors.map((actor) => ({
+    ...stored,
+    sceneDescriptions: stored.sceneDescriptions ?? [],
+    actors: stored.actors.map((actor) => ({
       ...actor,
       activities: actor.activities.map((a: ActivityWithLegacyDuration) => {
         if (a.end !== undefined) return a;
@@ -32,14 +36,14 @@ const dbPromise = openDB<TimelineTrackerDB>("timeline-tracker", 1, {
 
 export async function listCases(): Promise<Case[]> {
   const cases = (await (await dbPromise).getAll("cases")).map(
-    convertLegacyDurationsToEnds,
+    upgradeStoredCase,
   );
   return cases.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function getCase(id: string): Promise<Case | undefined> {
   const c = await (await dbPromise).get("cases", id);
-  return c && convertLegacyDurationsToEnds(c);
+  return c && upgradeStoredCase(c);
 }
 
 export async function saveCase(c: Case): Promise<void> {

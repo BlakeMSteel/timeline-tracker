@@ -78,6 +78,17 @@ export function overlappingActivityIds(actor: Actor): Set<string> {
   return ids;
 }
 
+export function dayBounds(
+  actors: Actor[],
+): [MinutesFromMidnight, MinutesFromMidnight] | null {
+  const all = actors.flatMap((a) => a.activities);
+  if (all.length === 0) return null;
+  return [
+    Math.min(...all.map((a) => a.start)),
+    Math.max(...all.map((a) => a.end)),
+  ];
+}
+
 export function wholeHoursCoveringActivities(
   actors: Actor[],
 ): [MinutesFromMidnight, MinutesFromMidnight] {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
   Box,
@@ -19,8 +19,16 @@ import ActorEditor from "../components/ActorEditor";
 import CaseNotFound from "../components/CaseNotFound";
 import LocationEditor from "../components/LocationEditor";
 import { TOOLBAR_HEIGHT } from "../components/Header";
+import ScenesPanel, { type ScenesSubject } from "../components/ScenesPanel";
 import MapCanvas, { MapPoint, PlacePin } from "../components/MapCanvas";
 import { saveCase } from "../cases/db";
+import {
+  attachDescriptionToScene,
+  deleteDescription,
+  markDescriptionReviewed,
+  reconcileSceneDescriptions,
+  setSceneDescriptionText,
+} from "../cases/scenes";
 import { DEFAULT_LOCATION_ICON } from "../cases/locationIcons";
 import {
   ACTOR_COLORS,
@@ -62,6 +70,30 @@ const tabbedPanelSx = {
 const tabsSx = { borderBottom: 1, borderColor: "divider", flexShrink: 0 };
 
 const APP_CONTAINER_VERTICAL_PADDING = 24;
+const SCENE_RECONCILE_DELAY_MS = 800;
+
+function SelectableCard({
+  selected,
+  onSelect,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Box
+      onClickCapture={onSelect}
+      sx={{
+        borderRadius: 1,
+        outline: (theme) =>
+          selected ? `2px solid ${theme.palette.primary.main}` : "none",
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
 
 function CaseForm({ initialCase }: { initialCase: Case }) {
   const [c, setC] = useState(initialCase);
@@ -69,6 +101,13 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
     useState<LocationBeingPlaced>(null);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("locations");
   const [mainTab, setMainTab] = useState<MainTab>("map");
+  const [scenesSubject, setScenesSubject] = useState<ScenesSubject | null>(
+    null,
+  );
+  const caseWithReconciledScenes = useMemo(
+    () => reconcileSceneDescriptions(c),
+    [c],
+  );
   const [justAddedActorId, setJustAddedActorId] = useState<string | null>(null);
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up("md"));
 
@@ -85,6 +124,18 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
   useEffect(() => {
     if (c !== initialCase) saveCase(c);
   }, [c, initialCase]);
+
+  useEffect(() => {
+    if (caseWithReconciledScenes === c) return;
+    const timer = setTimeout(
+      () => setC(reconcileSceneDescriptions),
+      SCENE_RECONCILE_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [c, caseWithReconciledScenes]);
+
+  const updateScenes = (change: (reconciled: Case) => Case) =>
+    setC((prev) => change(reconcileSceneDescriptions(prev)));
 
   const update = (patch: Partial<Case>) =>
     setC((prev) => ({ ...prev, ...patch }));
@@ -246,18 +297,28 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                   </Typography>
                 )}
                 {c.locations.map((l) => (
-                  <LocationEditor
+                  <SelectableCard
                     key={l.id}
-                    location={l}
-                    isBeingMoved={locationBeingPlaced === l.id}
-                    onChange={(patch) => updateLocation(l.id, patch)}
-                    onToggleMove={() =>
-                      startPlacingLocation(
-                        locationBeingPlaced === l.id ? null : l.id,
-                      )
+                    selected={
+                      scenesSubject?.kind === "location" &&
+                      scenesSubject.id === l.id
                     }
-                    onDelete={() => deletePlace(l.id)}
-                  />
+                    onSelect={() =>
+                      setScenesSubject({ kind: "location", id: l.id })
+                    }
+                  >
+                    <LocationEditor
+                      location={l}
+                      isBeingMoved={locationBeingPlaced === l.id}
+                      onChange={(patch) => updateLocation(l.id, patch)}
+                      onToggleMove={() =>
+                        startPlacingLocation(
+                          locationBeingPlaced === l.id ? null : l.id,
+                        )
+                      }
+                      onDelete={() => deletePlace(l.id)}
+                    />
+                  </SelectableCard>
                 ))}
               </>
             ) : (
@@ -277,14 +338,24 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
                   </Typography>
                 )}
                 {c.actors.map((actor) => (
-                  <ActorEditor
+                  <SelectableCard
                     key={actor.id}
-                    actor={actor}
-                    locations={c.locations}
-                    onChange={updateActor}
-                    onDelete={() => deleteActor(actor)}
-                    defaultExpanded={actor.id === justAddedActorId}
-                  />
+                    selected={
+                      scenesSubject?.kind === "actor" &&
+                      scenesSubject.id === actor.id
+                    }
+                    onSelect={() =>
+                      setScenesSubject({ kind: "actor", id: actor.id })
+                    }
+                  >
+                    <ActorEditor
+                      actor={actor}
+                      locations={c.locations}
+                      onChange={updateActor}
+                      onDelete={() => deleteActor(actor)}
+                      defaultExpanded={actor.id === justAddedActorId}
+                    />
+                  </SelectableCard>
                 ))}
               </>
             )}
@@ -302,9 +373,30 @@ function CaseForm({ initialCase }: { initialCase: Case }) {
             <Tab value="scenes" label="Scenes" />
           </Tabs>
           {mainTab === "scenes" ? (
-            <Typography color="text.secondary" sx={{ p: 1.5 }}>
-              Scenes aren't available yet.
-            </Typography>
+            <ScenesPanel
+              c={caseWithReconciledScenes}
+              subject={scenesSubject}
+              onDescriptionChange={(scene, text) =>
+                updateScenes((reconciled) =>
+                  setSceneDescriptionText(reconciled, scene, text),
+                )
+              }
+              onMarkReviewed={(descriptionId) =>
+                updateScenes((reconciled) =>
+                  markDescriptionReviewed(reconciled, descriptionId),
+                )
+              }
+              onAttach={(descriptionId, scene) =>
+                updateScenes((reconciled) =>
+                  attachDescriptionToScene(reconciled, descriptionId, scene),
+                )
+              }
+              onDeleteDescription={(descriptionId) =>
+                updateScenes((reconciled) =>
+                  deleteDescription(reconciled, descriptionId),
+                )
+              }
+            />
           ) : (
             <Stack spacing={2} sx={{ p: 1.5, flex: 1, minHeight: 0 }}>
               <Box
