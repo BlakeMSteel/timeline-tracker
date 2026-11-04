@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -11,61 +12,47 @@ import {
   Typography,
 } from "@mui/material";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
+import MarkdownText from "./MarkdownText";
 import { locationIconOrDefault } from "../cases/locationIcons";
-import { activityAt, formatTime } from "../cases/time";
-import type {
-  Activity,
-  Actor,
-  Location,
-  MinutesFromMidnight,
-} from "../cases/types";
-
-interface Visit {
-  actor: Actor;
-  activity: Activity;
-}
-
-function actorsPresent(
-  location: Location,
-  actors: Actor[],
-  time: MinutesFromMidnight,
-): Visit[] {
-  return actors.flatMap((actor) => {
-    const activity = activityAt(actor, time);
-    return activity?.locationId === location.id ? [{ actor, activity }] : [];
-  });
-}
+import {
+  deriveScenes,
+  descriptionForScene,
+  sceneAt,
+  sceneTimeLabel,
+} from "../cases/scenes";
+import { formatTime } from "../cases/time";
+import type { Case, Location, MinutesFromMidnight } from "../cases/types";
 
 const ICON_BUTTON_HEIGHT = 34;
 
 const locationName = (location: Location) => location.name || "Unnamed place";
-const actorName = (actor: Actor) => actor.name || "Unnamed actor";
 
 export default function LocationsSidebar({
-  locations,
-  actors,
+  c,
   time,
 }: {
-  locations: Location[];
-  actors: Actor[];
+  c: Case;
   time: MinutesFromMidnight;
 }) {
-  const [locationShowingDetails, setLocationShowingDetails] =
+  const [locationShowingScene, setLocationShowingScene] =
     useState<Location | null>(null);
+  const scenes = deriveScenes(c);
 
   return (
     <Stack spacing={1}>
       <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
         Locations at {formatTime(time)}
       </Typography>
-      {locations.length === 0 && (
+      {c.locations.length === 0 && (
         <Typography variant="body2" color="text.secondary">
           No locations yet.
         </Typography>
       )}
-      {locations.map((location) => {
+      {c.locations.map((location) => {
         const { Icon } = locationIconOrDefault(location.icon);
-        const presentCount = actorsPresent(location, actors, time).length;
+        const scene = sceneAt(scenes, location.id, time);
+        const presentCount = scene?.actorIds.length ?? 0;
+        const hasDescription = scene && descriptionForScene(c, scene);
         return (
           <Box
             key={location.id}
@@ -88,55 +75,55 @@ export default function LocationsSidebar({
               {locationName(location)}
             </Typography>
             {presentCount > 0 && (
-              <>
-                <Typography variant="caption" color="text.secondary">
-                  {presentCount} here
-                </Typography>
-                <IconButton
-                  size="small"
-                  aria-label={`Who's at ${locationName(location)}`}
-                  onClick={() => setLocationShowingDetails(location)}
-                >
-                  <StickyNote2OutlinedIcon fontSize="small" />
-                </IconButton>
-              </>
+              <Typography variant="caption" color="text.secondary">
+                {presentCount} here
+              </Typography>
+            )}
+            {(presentCount > 0 || hasDescription) && (
+              <IconButton
+                size="small"
+                aria-label={`Scene at ${locationName(location)}`}
+                onClick={() => setLocationShowingScene(location)}
+              >
+                <StickyNote2OutlinedIcon fontSize="small" />
+              </IconButton>
             )}
           </Box>
         );
       })}
 
       <Dialog
-        open={locationShowingDetails !== null}
-        onClose={() => setLocationShowingDetails(null)}
+        open={locationShowingScene !== null}
+        onClose={() => setLocationShowingScene(null)}
         fullWidth
-        maxWidth="xs"
+        maxWidth="sm"
       >
-        {locationShowingDetails && (
-          <LocationDetails
-            location={locationShowingDetails}
-            actors={actors}
-            time={time}
-          />
+        {locationShowingScene && (
+          <SceneDetails c={c} location={locationShowingScene} time={time} />
         )}
         <DialogActions>
-          <Button onClick={() => setLocationShowingDetails(null)}>Close</Button>
+          <Button onClick={() => setLocationShowingScene(null)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Stack>
   );
 }
 
-function LocationDetails({
+function SceneDetails({
+  c,
   location,
-  actors,
   time,
 }: {
+  c: Case;
   location: Location;
-  actors: Actor[];
   time: MinutesFromMidnight;
 }) {
   const { Icon } = locationIconOrDefault(location.icon);
-  const present = actorsPresent(location, actors, time);
+  const scene = sceneAt(deriveScenes(c), location.id, time);
+  const description = scene && descriptionForScene(c, scene);
+  const actorsInScene = scene
+    ? c.actors.filter((actor) => scene.actorIds.includes(actor.id))
+    : [];
 
   return (
     <>
@@ -146,51 +133,40 @@ function LocationDetails({
           <span>{locationName(location)}</span>
         </Stack>
         <Typography variant="body2" color="text.secondary">
-          At {formatTime(time)}
+          {scene ? sceneTimeLabel(scene) : formatTime(time)}
         </Typography>
       </DialogTitle>
       <DialogContent>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-          Here now
-        </Typography>
-        {present.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            Nobody.
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {present.map((visit) => (
-              <VisitLine key={visit.activity.id} visit={visit} />
-            ))}
-          </Stack>
-        )}
+        <Stack spacing={1.5}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+            {actorsInScene.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Nobody here.
+              </Typography>
+            ) : (
+              actorsInScene.map((actor) => (
+                <Chip
+                  key={actor.id}
+                  size="small"
+                  label={actor.name || "Unnamed actor"}
+                  sx={{
+                    bgcolor: actor.color,
+                    color: "common.white",
+                    fontWeight: 600,
+                  }}
+                />
+              ))
+            )}
+          </Box>
+          {description ? (
+            <MarkdownText text={description.text} />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No description for this scene.
+            </Typography>
+          )}
+        </Stack>
       </DialogContent>
     </>
-  );
-}
-
-function VisitLine({ visit: { actor, activity } }: { visit: Visit }) {
-  return (
-    <Box
-      sx={{
-        pl: 1,
-        borderLeft: 3,
-        borderColor: actor.color,
-      }}
-    >
-      <Typography variant="body2">
-        <b>{actorName(actor)}</b> · {formatTime(activity.start)}–
-        {formatTime(activity.end)}
-      </Typography>
-      {activity.description && (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ whiteSpace: "pre-line" }}
-        >
-          {activity.description}
-        </Typography>
-      )}
-    </Box>
   );
 }

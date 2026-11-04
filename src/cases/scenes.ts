@@ -196,6 +196,16 @@ export function reconcileSceneDescriptions(c: Case): Case {
   };
 }
 
+export function sceneAt(
+  scenes: Scene[],
+  locationId: string,
+  time: number,
+): Scene | undefined {
+  return scenes.find(
+    (s) => s.locationId === locationId && s.start <= time && time < s.end,
+  );
+}
+
 export function descriptionForScene(
   c: Case,
   scene: Scene,

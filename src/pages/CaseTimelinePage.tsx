@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -24,6 +24,7 @@ import {
   sortedActivities,
   wholeHoursCoveringActivities,
 } from "../cases/time";
+import { reconcileSceneDescriptions } from "../cases/scenes";
 import { caseTitle, type Actor, type Case } from "../cases/types";
 import { useCase } from "./useCase";
 
@@ -45,6 +46,11 @@ function CaseTimeline({ c }: { c: Case }) {
   const [from, to] = range;
   const [time, setTime] = useState(from);
   const [playing, setPlaying] = useState(false);
+
+  const caseWithReconciledScenes = useMemo(
+    () => reconcileSceneDescriptions(c),
+    [c],
+  );
 
   const isPlaying = playing && time < to;
 
@@ -151,11 +157,7 @@ function CaseTimeline({ c }: { c: Case }) {
           <CurrentActorPositions c={c} actors={c.actors} time={time} />
         </MapCanvas>
         <EntryBox>
-          <LocationsSidebar
-            locations={c.locations}
-            actors={c.actors}
-            time={time}
-          />
+          <LocationsSidebar c={caseWithReconciledScenes} time={time} />
         </EntryBox>
       </Box>
 
